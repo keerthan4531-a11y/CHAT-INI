@@ -156,6 +156,69 @@ data class AiModel(
             description = "Huge context multimodal reasoning"
         )
 
+        val GPT_5_6_LUNA = AiModel(
+            id = "GPT:gpt-5.6-luna",
+            displayName = "GPT-5.6 Luna",
+            providerType = ProviderType.GAI_CLOUD,
+            supportsReasoning = true,
+            supportsWebSearch = true,
+            description = "High intelligence experimental model"
+        )
+
+        val GEMINI_2_5_FLASH = AiModel(
+            id = "GEMINI:v2.5-flash",
+            displayName = "Gemini 2.5 Flash",
+            providerType = ProviderType.GAI_CLOUD,
+            supportsReasoning = false,
+            supportsWebSearch = true,
+            description = "Google fast reasoning & multimodal"
+        )
+
+        val DEEPSEEK_V3_0324 = AiModel(
+            id = "DEEPSEEK:v3-0324",
+            displayName = "DeepSeek V3 (0324)",
+            providerType = ProviderType.GAI_CLOUD,
+            supportsReasoning = false,
+            supportsWebSearch = true,
+            description = "DeepSeek V3 optimized build"
+        )
+
+        val GROK_4_REASONING = AiModel(
+            id = "XAI:grok-4-fast-reasoning",
+            displayName = "Grok 4 (Reasoning)",
+            providerType = ProviderType.GAI_CLOUD,
+            supportsReasoning = true,
+            supportsWebSearch = true,
+            description = "Grok 4 with deep thinking process"
+        )
+
+        val GROK_3 = AiModel(
+            id = "BOLATU:grok-3",
+            displayName = "Grok 3",
+            providerType = ProviderType.GAI_CLOUD,
+            supportsReasoning = false,
+            supportsWebSearch = true,
+            description = "xAI Grok 3 flagship foundation model"
+        )
+
+        val CLAUDE_HAIKU_4_5 = AiModel(
+            id = "BOLATU:claude-haiku-4-5-20251001",
+            displayName = "Claude 4.5 Haiku",
+            providerType = ProviderType.GAI_CLOUD,
+            supportsReasoning = false,
+            supportsWebSearch = true,
+            description = "Lightning-fast Anthropic intelligence"
+        )
+
+        val GEMMA_4_31B = AiModel(
+            id = "OPEN_ROUTER:google/gemma-4-31b-it",
+            displayName = "Google Gemma 31B",
+            providerType = ProviderType.GAI_CLOUD,
+            supportsReasoning = false,
+            supportsWebSearch = true,
+            description = "Google open weights 31B instruction model"
+        )
+
         // --- Ox Alpha Models ---
         val GLM_5_3_FLASH = AiModel(
             id = "z-ai/glm-5.3-flash",
@@ -185,11 +248,18 @@ data class AiModel(
             DEEPSEEK_V3,
             GEMINI_3_FLASH,
             GROK_4,
+            GROK_4_REASONING,
             CLAUDE_HAIKU,
+            CLAUDE_HAIKU_4_5,
             GPT_4_1_MINI,
-            GEMINI_3_5_LITE,
-            DEEPSEEK_V4_FLASH,
             GPT_6_LUNA,
+            GPT_5_6_LUNA,
+            GEMINI_3_5_LITE,
+            GEMINI_2_5_FLASH,
+            DEEPSEEK_V4_FLASH,
+            DEEPSEEK_V3_0324,
+            GROK_3,
+            GEMMA_4_31B,
             CLAUDE_SONNET_4_5,
             GROK_4_1,
             GEMINI_3_PRO,

@@ -20,6 +20,7 @@ import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import kotlin.random.Random
 
 /**
  * Direct Cloud Provider communicating with multi-model cloud services.
@@ -48,6 +49,10 @@ class GaiCloudProvider(
     }
 
     private val deviceId = UUID.randomUUID().toString().replace("-", "").take(16)
+
+    private fun getRandomResidentialIp(): String {
+        return "${Random.nextInt(50, 201)}.${Random.nextInt(1, 251)}.${Random.nextInt(1, 251)}.${Random.nextInt(1, 251)}"
+    }
 
     private fun sha1(text: String): String {
         val md = MessageDigest.getInstance("SHA-1")
@@ -107,7 +112,7 @@ class GaiCloudProvider(
             put("security", aesEncrypt(innerJson.toString()))
         }
 
-        val currentDeviceId = UUID.randomUUID().toString().replace("-", "").take(16)
+        val fakeIp = getRandomResidentialIp()
 
         val httpRequest = Request.Builder()
             .url("$baseUrl/common/sse/chat")
@@ -117,7 +122,10 @@ class GaiCloudProvider(
             .header("x-app-version", APP_VERSION)
             .header("x-language", "en")
             .header("x-device-type", "android")
-            .header("x-device-id", currentDeviceId)
+            .header("x-device-id", deviceId)
+            .header("X-Forwarded-For", fakeIp)
+            .header("X-Real-IP", fakeIp)
+            .header("Client-IP", fakeIp)
             .header("content-type", "application/json")
             .build()
 
@@ -149,6 +157,8 @@ class GaiCloudProvider(
                     return@callbackFlow
                 }
 
+                var hasError = false
+
                 SseStreamReader.readStream(
                     inputStream = bodyStream,
                     onDataPayload = { payload ->
@@ -157,11 +167,17 @@ class GaiCloudProvider(
                             val code = json.optInt("code", 0)
                             val msg = json.optString("message", "")
                             if (msg.contains("free usage limit", ignoreCase = true) || msg.contains("upgrade to VIP", ignoreCase = true)) {
-                                trySend(StreamEvent.Error(Exception("Model limit: $msg. Please switch to GPT-4o, DeepSeek V3, or Gemini 3 Flash.")))
+                                hasError = true
+                                val ex = Exception("Model limit: $msg. Please switch to GPT-4o, DeepSeek V3, or Gemini 3 Flash.")
+                                trySend(StreamEvent.Error(ex))
+                                close(ex)
                                 return@readStream
                             }
                             if (code != 0 && code != 200) {
-                                trySend(StreamEvent.Error(Exception(msg.ifEmpty { "Error code $code" })))
+                                hasError = true
+                                val ex = Exception(msg.ifEmpty { "Error code $code" })
+                                trySend(StreamEvent.Error(ex))
+                                close(ex)
                                 return@readStream
                             }
 
@@ -197,14 +213,20 @@ class GaiCloudProvider(
                         }
                     },
                     onComplete = {
-                        parser.flush()
-                        val finalMsg = ChatMessage(
-                            role = ChatRole.ASSISTANT,
-                            content = parser.getFullContent(),
-                            reasoningContent = parser.getFullThinking().ifEmpty { null },
-                            citations = citations
-                        )
-                        trySend(StreamEvent.Completed(finalMsg))
+                        if (!hasError) {
+                            parser.flush()
+                            val fullContent = parser.getFullContent()
+                            val fullThinking = parser.getFullThinking()
+                            if (fullContent.isNotEmpty() || fullThinking.isNotEmpty()) {
+                                val finalMsg = ChatMessage(
+                                    role = ChatRole.ASSISTANT,
+                                    content = fullContent,
+                                    reasoningContent = fullThinking.ifEmpty { null },
+                                    citations = citations
+                                )
+                                trySend(StreamEvent.Completed(finalMsg))
+                            }
+                        }
                         close()
                     }
                 )
