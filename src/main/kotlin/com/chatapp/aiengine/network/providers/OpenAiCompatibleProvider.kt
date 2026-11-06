@@ -4,6 +4,7 @@ import com.chatapp.aiengine.core.AiProvider
 import com.chatapp.aiengine.core.ThinkingStreamParser
 import com.chatapp.aiengine.model.*
 import com.chatapp.aiengine.network.HttpClientProvider
+import com.chatapp.aiengine.network.ProxyPool
 import com.chatapp.aiengine.network.SseStreamReader
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -26,7 +27,8 @@ import org.json.JSONObject
 class OpenAiCompatibleProvider(
     private val client: OkHttpClient = HttpClientProvider.defaultClient,
     private val endpointUrl: String = "https://api.deepseek.com/chat/completions",
-    private val apiKey: String = ""
+    private val apiKey: String = "",
+    private val proxyPool: ProxyPool? = null
 ) : AiProvider {
 
     override val providerType: ProviderType = ProviderType.OPENAI_COMPATIBLE
@@ -66,6 +68,7 @@ class OpenAiCompatibleProvider(
             reqBuilder.header("Authorization", "Bearer $apiKey")
         }
 
+        val client = proxyPool?.httpClientFor(request.proxy) ?: this.client
         val call = client.newCall(reqBuilder.build())
 
         val parser = ThinkingStreamParser { event ->

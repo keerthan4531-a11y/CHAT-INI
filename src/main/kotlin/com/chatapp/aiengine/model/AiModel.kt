@@ -28,6 +28,8 @@ enum class ProviderType {
  * @property providerType The routing provider used to connect to this model.
  * @property supportsReasoning Whether the model streams reasoning/thinking tokens before the final content.
  * @property supportsWebSearch Whether web search can be enabled for this model.
+ * @property supportsTools Whether the model can emit typed tool calls (MCP).
+ * @property contextWindow Approximate context window in tokens.
  * @property description Brief summary of model strengths or context window.
  */
 data class AiModel(
@@ -36,6 +38,8 @@ data class AiModel(
     val providerType: ProviderType,
     val supportsReasoning: Boolean = false,
     val supportsWebSearch: Boolean = true,
+    val supportsTools: Boolean = true,
+    val contextWindow: Int = 128_000,
     val description: String = ""
 ) {
     companion object {
@@ -118,7 +122,38 @@ data class AiModel(
             providerType = ProviderType.GAI_CLOUD,
             supportsReasoning = false,
             supportsWebSearch = true,
+            contextWindow = 256_000,
             description = "Direct, witty intelligence with live capabilities"
+        )
+
+        val GROK_4_1 = AiModel(
+            id = "XAI:grok-4.1",
+            displayName = "Grok 4.1",
+            providerType = ProviderType.GAI_CLOUD,
+            supportsReasoning = true,
+            supportsWebSearch = true,
+            contextWindow = 256_000,
+            description = "Agentic Grok with stronger tool calling + DeepSearch"
+        )
+
+        val CLAUDE_SONNET_4_5 = AiModel(
+            id = "BOLATU:claude-sonnet-4-5",
+            displayName = "Claude Sonnet 4.5",
+            providerType = ProviderType.GAI_CLOUD,
+            supportsReasoning = true,
+            supportsWebSearch = true,
+            contextWindow = 200_000,
+            description = "Careful long-form writing and computer use"
+        )
+
+        val GEMINI_3_PRO = AiModel(
+            id = "GEMINI:gemini-3-pro",
+            displayName = "Gemini 3 Pro",
+            providerType = ProviderType.GAI_CLOUD,
+            supportsReasoning = true,
+            supportsWebSearch = true,
+            contextWindow = 1_000_000,
+            description = "Huge context multimodal reasoning"
         )
 
         // --- Ox Alpha Models ---
@@ -153,7 +188,10 @@ data class AiModel(
             DEEPSEEK_V3,
             DEEPSEEK_V4_FLASH,
             CLAUDE_HAIKU,
+            CLAUDE_SONNET_4_5,
             GROK_4,
+            GROK_4_1,
+            GEMINI_3_PRO,
             GLM_5_3_FLASH,
             DEEPSEEK_R1_OFFICIAL
         )

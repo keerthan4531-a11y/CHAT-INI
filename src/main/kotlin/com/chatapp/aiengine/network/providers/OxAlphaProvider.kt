@@ -3,6 +3,7 @@ package com.chatapp.aiengine.network.providers
 import com.chatapp.aiengine.core.AiProvider
 import com.chatapp.aiengine.core.ThinkingStreamParser
 import com.chatapp.aiengine.model.*
+import com.chatapp.aiengine.network.ProxyPool
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +24,8 @@ import java.util.concurrent.TimeUnit
  * Handles automatic CSRF handshake and session cookies.
  */
 class OxAlphaProvider(
-    private val baseUrl: String = "https://oxalpha.com"
+    private val baseUrl: String = "https://oxalpha.com",
+    private val proxyPool: ProxyPool? = null
 ) : AiProvider {
 
     override val providerType: ProviderType = ProviderType.OX_ALPHA
@@ -55,10 +57,14 @@ class OxAlphaProvider(
 
     private var currentCsrfToken: String? = null
 
+    private fun clientFor(proxy: ProxyEndpoint?): OkHttpClient =
+        if (proxy == null) client
+        else proxyPool?.applyProxy(client.newBuilder(), proxy)?.build() ?: client
+
     /**
      * Initializes or refreshes session and extracts CSRF token.
      */
-    private suspend fun initFreshSession(): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun initFreshSession(proxy: ProxyEndpoint? = null): Boolean = withContext(Dispatchers.IO) {
         cookieJar.clear()
         currentCsrfToken = null
 
@@ -69,7 +75,7 @@ class OxAlphaProvider(
             .build()
 
         try {
-            client.newCall(request).execute().use { response ->
+            clientFor(proxy).newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext false
                 val html = response.body?.string() ?: return@withContext false
 
@@ -88,7 +94,7 @@ class OxAlphaProvider(
 
         // Auto-initialize session if needed or if forced
         if (currentCsrfToken == null || request.forceNewSession) {
-            val ok = initFreshSession()
+            val ok = initFreshSession(request.proxy)
             if (!ok || currentCsrfToken == null) {
                 val err = Exception("Failed to initialize Ox Alpha session / CSRF token.")
                 trySend(StreamEvent.Error(err))
@@ -126,6 +132,7 @@ class OxAlphaProvider(
             .header("X-CSRF-TOKEN", currentCsrfToken ?: "")
             .build()
 
+        val client = clientFor(request.proxy)
         val call = client.newCall(httpRequest)
 
         val parser = ThinkingStreamParser { event ->

@@ -2,32 +2,109 @@ package com.chatapp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Modern Dark-first AI Theme Palette
-val BackgroundDark = Color(0xFF0F0F12)
-val SurfaceDark = Color(0xFF18181C)
-val SurfaceElevatedDark = Color(0xFF222228)
-val SurfaceBorderDark = Color(0xFF2E2E38)
+/**
+ * PawPal palette — warm paper, ink outlines and pastel "sticker" accents.
+ * Every color has a light and a dark variant so the doodle look survives both
+ * modes instead of turning into a generic dark dashboard.
+ */
+data class PawPalColors(
+    val isDark: Boolean,
+    val paper: Color,
+    val paperDeep: Color,
+    val card: Color,
+    val cardAlt: Color,
+    val ink: Color,
+    val inkSoft: Color,
+    val inkMute: Color,
+    val line: Color,
+    val lineSoft: Color,
+    val coral: Color,
+    val coralSoft: Color,
+    val butter: Color,
+    val butterSoft: Color,
+    val mint: Color,
+    val mintSoft: Color,
+    val sky: Color,
+    val skySoft: Color,
+    val lilac: Color,
+    val lilacSoft: Color,
+    val rose: Color,
+    val roseSoft: Color,
+    val codeBg: Color,
+    val codeText: Color,
+    val success: Color,
+    val danger: Color,
+    val shadow: Color,
+    val catFur: Color,
+    val catFurShade: Color,
+    val catOutline: Color,
+    val catPink: Color
+)
 
-val TextPrimaryDark = Color(0xFFF3F4F6)
-val TextSecondaryDark = Color(0xFF9CA3AF)
-val TextMutedDark = Color(0xFF6B7280)
+val LightPawPalColors = PawPalColors(
+    isDark = false,
+    paper = Color(0xFFFBF5E9),
+    paperDeep = Color(0xFFF4EAD8),
+    card = Color(0xFFFFFDF7),
+    cardAlt = Color(0xFFFFF7E8),
+    ink = Color(0xFF2F2A3D),
+    inkSoft = Color(0xFF5B5470),
+    inkMute = Color(0xFF8B83A0),
+    line = Color(0xFF2F2A3D),
+    lineSoft = Color(0xFFE6DCC9),
+    coral = Color(0xFFFF8A7A),
+    coralSoft = Color(0xFFFFE0DA),
+    butter = Color(0xFFFFD166),
+    butterSoft = Color(0xFFFFF1C9),
+    mint = Color(0xFF9FE3C8),
+    mintSoft = Color(0xFFDFF7EE),
+    sky = Color(0xFFA9D9F2),
+    skySoft = Color(0xFFE3F4FC),
+    lilac = Color(0xFFCDBDF7),
+    lilacSoft = Color(0xFFEEE7FF),
+    rose = Color(0xFFFFC2D1),
+    roseSoft = Color(0xFFFFE6EC),
+    codeBg = Color(0xFF2B2735),
+    codeText = Color(0xFFF6EFE3),
+    success = Color(0xFF2E9E7E),
+    danger = Color(0xFFD9534F),
+    shadow = Color(0xFF2F2A3D),
+    catFur = Color(0xFFFFF6E4),
+    catFurShade = Color(0xFFF3E3C8),
+    catOutline = Color(0xFF3A3145),
+    catPink = Color(0xFFFFB3C7)
+)
 
-// Brand & Accent Colors
-val PrimaryAccent = Color(0xFF10B981) // Emerald / ChatGPT-vibe
-val PrimaryAccentVariant = Color(0xFF059669)
-
-// Reasoning / Thinking Accent (Warm Amber / Gold)
-val ReasoningAccent = Color(0xFFF59E0B)
-val ReasoningBackground = Color(0xFF1C1914)
-val ReasoningBorder = Color(0xFF3B2E15)
-
-// Web Search Accent (Electric Cyan / Sky)
-val SearchAccent = Color(0xFF0EA5E9)
-val SearchBackground = Color(0xFF0C1D2B)
-val SearchBorder = Color(0xFF163E5C)
-
-// Message Bubbles
-val UserBubbleColor = Color(0xFF272730)
-val AssistantAvatarColor = Color(0xFF10B981)
-val CodeBlockBackground = Color(0xFF121216)
-val ErrorColor = Color(0xFFEF4444)
+val DarkPawPalColors = PawPalColors(
+    isDark = true,
+    paper = Color(0xFF201D29),
+    paperDeep = Color(0xFF191621),
+    card = Color(0xFF2A2635),
+    cardAlt = Color(0xFF322D40),
+    ink = Color(0xFFF6EFE3),
+    inkSoft = Color(0xFFC9C0D6),
+    inkMute = Color(0xFF9A91AB),
+    line = Color(0xFFEFE6D8),
+    lineSoft = Color(0xFF3D374B),
+    coral = Color(0xFFFF9D8F),
+    coralSoft = Color(0xFF4A2F33),
+    butter = Color(0xFFF2C96B),
+    butterSoft = Color(0xFF453A22),
+    mint = Color(0xFF86D6B8),
+    mintSoft = Color(0xFF1F3B33),
+    sky = Color(0xFF8FC9E8),
+    skySoft = Color(0xFF1E3442),
+    lilac = Color(0xFFB9A6EF),
+    lilacSoft = Color(0xFF332C4A),
+    rose = Color(0xFFF2A8BD),
+    roseSoft = Color(0xFF452A35),
+    codeBg = Color(0xFF17141F),
+    codeText = Color(0xFFF6EFE3),
+    success = Color(0xFF6FD3AE),
+    danger = Color(0xFFFF8A7A),
+    shadow = Color(0xFF0F0D15),
+    catFur = Color(0xFFF4E8D4),
+    catFurShade = Color(0xFFE4D2B4),
+    catOutline = Color(0xFF2A2438),
+    catPink = Color(0xFFF2A8BD)
+)

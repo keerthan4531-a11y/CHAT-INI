@@ -3,30 +3,34 @@ package com.chatapp.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chatapp.aiengine.model.WebCitation
-import com.chatapp.ui.theme.*
+import com.chatapp.ui.theme.LocalPawPalColors
 
 /**
- * Component displaying live web search progress and retrieved external source cards.
+ * Live web search progress + source chips. Sources are horizontally
+ * scrollable so they never blow up the bubble width.
  */
 @Composable
 fun WebSearchCard(
@@ -34,121 +38,76 @@ fun WebSearchCard(
     citations: List<WebCitation>,
     modifier: Modifier = Modifier
 ) {
+    if (!isSearching && citations.isEmpty()) return
+    val colors = LocalPawPalColors.current
     val uriHandler = LocalUriHandler.current
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
+    Column(modifier = modifier) {
         if (isSearching) {
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(SearchBackground)
-                    .border(1.dp, SearchBorder, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+            WobblyCard(
+                seed = 5,
+                fill = colors.skySoft,
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp)
             ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(14.dp),
-                    strokeWidth = 2.dp,
-                    color = SearchAccent
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = "Searching live web sources...",
-                    color = SearchAccent,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-
-        if (citations.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = "Sources (${citations.size})",
-                color = TextSecondaryDark,
-                fontSize = 11.5.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(citations) { citation ->
-                    CitationChip(
-                        citation = citation,
-                        onClick = {
-                            if (citation.url.isNotEmpty()) {
-                                try {
-                                    uriHandler.openUri(citation.url)
-                                } catch (_: Exception) {}
-                            }
-                        }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                        color = colors.ink
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        text = "sniffing the live web…",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.ink
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun CitationChip(
-    citation: WebCitation,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(SurfaceElevatedDark)
-            .border(1.dp, SurfaceBorderDark, RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp)
-            .widthIn(max = 220.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Language,
-            contentDescription = null,
-            tint = SearchAccent,
-            modifier = Modifier.size(14.dp)
-        )
-
-        Spacer(modifier = Modifier.width(6.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
+        if (citations.isNotEmpty()) {
+            Spacer(Modifier.height(5.dp))
             Text(
-                text = citation.title.ifEmpty { citation.url },
-                color = TextPrimaryDark,
-                fontSize = 11.5.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                text = "Sources (${citations.size})",
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.inkMute
             )
-            if (citation.snippet.isNotEmpty()) {
-                Text(
-                    text = citation.snippet,
-                    color = TextMutedDark,
-                    fontSize = 10.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(top = 3.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                citations.forEach { citation ->
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.card)
+                            .border(1.2.dp, colors.lineSoft, RoundedCornerShape(10.dp))
+                            .padding(horizontal = 9.dp, vertical = 5.dp)
+                            .clickable { runCatching { uriHandler.openUri(citation.url) } },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "🔗", fontSize = 11.sp)
+                        Spacer(Modifier.width(4.dp))
+                        Column {
+                            Text(
+                                text = citation.title.ifEmpty { citation.url },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colors.ink,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = citation.url,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colors.inkMute,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
             }
         }
-
-        Spacer(modifier = Modifier.width(4.dp))
-
-        Icon(
-            imageVector = Icons.Outlined.OpenInNew,
-            contentDescription = "Open link",
-            tint = TextMutedDark,
-            modifier = Modifier.size(12.dp)
-        )
     }
 }
