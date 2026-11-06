@@ -168,7 +168,7 @@ class ProxyPool(
      * providers that need to keep their own cookie jar / timeouts.
      */
     fun applyProxy(builder: OkHttpClient.Builder, proxy: ProxyEndpoint?): OkHttpClient.Builder {
-        if (proxy == null) return builder
+        if (proxy == null || proxy.simulated || proxy.host.isBlank() || proxy.host.endsWith(".pawpal.dev")) return builder
         val javaProxy = when (proxy.type) {
             ProxyType.HTTP, ProxyType.HTTPS -> Proxy(Proxy.Type.HTTP, InetSocketAddress(proxy.host, proxy.port))
             ProxyType.SOCKS5 -> Proxy(Proxy.Type.SOCKS, InetSocketAddress(proxy.host, proxy.port))
@@ -192,7 +192,9 @@ class ProxyPool(
      * connection pools stay warm while rotating.
      */
     fun httpClientFor(proxy: ProxyEndpoint?): OkHttpClient {
-        if (proxy == null) return HttpClientProvider.defaultClient
+        if (proxy == null || proxy.simulated || proxy.host.isBlank() || proxy.host.endsWith(".pawpal.dev")) {
+            return HttpClientProvider.defaultClient
+        }
         return clients.getOrPut(proxy.id) {
             val builder = OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)

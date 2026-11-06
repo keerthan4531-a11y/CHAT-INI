@@ -107,6 +107,8 @@ class GaiCloudProvider(
             put("security", aesEncrypt(innerJson.toString()))
         }
 
+        val currentDeviceId = UUID.randomUUID().toString().replace("-", "").take(16)
+
         val httpRequest = Request.Builder()
             .url("$baseUrl/common/sse/chat")
             .post(envelopeJson.toString().toRequestBody("application/json".toMediaType()))
@@ -115,7 +117,7 @@ class GaiCloudProvider(
             .header("x-app-version", APP_VERSION)
             .header("x-language", "en")
             .header("x-device-type", "android")
-            .header("x-device-id", deviceId)
+            .header("x-device-id", currentDeviceId)
             .header("content-type", "application/json")
             .build()
 
@@ -153,9 +155,13 @@ class GaiCloudProvider(
                         try {
                             val json = JSONObject(payload)
                             val code = json.optInt("code", 0)
+                            val msg = json.optString("message", "")
+                            if (msg.contains("free usage limit", ignoreCase = true) || msg.contains("upgrade to VIP", ignoreCase = true)) {
+                                trySend(StreamEvent.Error(Exception("Model limit: $msg. Please switch to GPT-4o, DeepSeek V3, or Gemini 3 Flash.")))
+                                return@readStream
+                            }
                             if (code != 0 && code != 200) {
-                                val msg = json.optString("message", "Error code $code")
-                                trySend(StreamEvent.Error(Exception(msg)))
+                                trySend(StreamEvent.Error(Exception(msg.ifEmpty { "Error code $code" })))
                                 return@readStream
                             }
 

@@ -23,12 +23,12 @@ import com.chatapp.aiengine.network.ProxyPool
  * @property memoryFile Optional JSON file for durable agent memory.
  */
 data class AiEngineConfig(
-    val defaultModel: AiModel = AiModel.GROK_4_1,
-    val isWebSearchDefaultEnabled: Boolean = true,
-    val defaultMode: AgentMode = AgentMode.AGENT,
+    val defaultModel: AiModel = AiModel.GPT_4O,
+    val isWebSearchDefaultEnabled: Boolean = false,
+    val defaultMode: AgentMode = AgentMode.CHAT,
     val agentBudget: AgentBudget = AgentBudget(),
     val rateLimitPolicy: RateLimitPolicy = RateLimitPolicy(),
-    val proxies: List<ProxyEndpoint> = ProxyPool.demoPool(),
+    val proxies: List<ProxyEndpoint> = emptyList(),
     val mcpServers: List<McpServerConfig> = McpPresets.defaults(),
     val mcpEnabled: Boolean = true,
     val requireApprovalForWrites: Boolean = true,
