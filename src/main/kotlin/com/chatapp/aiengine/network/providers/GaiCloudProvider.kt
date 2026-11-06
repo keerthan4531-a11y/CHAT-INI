@@ -120,8 +120,8 @@ class GaiCloudProvider(
             .build()
 
         // Rotate through the proxy pool when a lane was assigned by the repository.
-        val client = proxyPool?.httpClientFor(request.proxy) ?: this.client
-        val call = client.newCall(httpRequest)
+        val activeClient = proxyPool?.httpClientFor(request.proxy) ?: this@GaiCloudProvider.client
+        val call = activeClient.newCall(httpRequest)
 
         // Parser automatically splits <think>...</think> tokens from normal content tokens!
         val parser = ThinkingStreamParser { event ->

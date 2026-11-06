@@ -158,45 +158,52 @@ class BuiltInTools {
      * Android) and no external dependency.
      */
     private fun evaluate(expression: String): Double {
-        val sanitized = expression.replace("[^0-9+\-*/.() ]".toRegex(), "")
+        val sanitized = expression.replace("""[^0-9+\-*/.() ]""".toRegex(), "")
         if (sanitized.isBlank()) throw IllegalArgumentException("empty expression")
-        var index = 0
-        fun peek(): Char = sanitized[index]
-        fun skip() { index++ }
-        fun parseExpression(): Double {
-            var value = parseTerm()
-            while (index < sanitized.length && (peek() == '+' || peek() == '-')) {
-                val op = peek(); skip()
-                val rhs = parseTerm()
-                value = if (op == '+') value + rhs else value - rhs
-            }
-            return value
-        }
-        fun parseTerm(): Double {
-            var value = parseFactor()
-            while (index < sanitized.length && (peek() == '*' || peek() == '/')) {
-                val op = peek(); skip()
-                val rhs = parseFactor()
-                value = if (op == '*') value * rhs else value / rhs
-            }
-            return value
-        }
-        fun parseFactor(): Double {
-            while (index < sanitized.length && peek() == ' ') skip()
-            if (index >= sanitized.length) throw IllegalArgumentException("unexpected end")
-            if (peek() == '(') {
-                skip()
-                val value = parseExpression()
-                if (index < sanitized.length && peek() == ')') skip()
+
+        class Parser(private val s: String) {
+            var index = 0
+            fun peek(): Char = s[index]
+            fun skip() { index++ }
+
+            fun parseExpression(): Double {
+                var value = parseTerm()
+                while (index < s.length && (peek() == '+' || peek() == '-')) {
+                    val op = peek(); skip()
+                    val rhs = parseTerm()
+                    value = if (op == '+') value + rhs else value - rhs
+                }
                 return value
             }
-            if (peek() == '-') { skip(); return -parseFactor() }
-            val start = index
-            while (index < sanitized.length && (peek().isDigit() || peek() == '.')) skip()
-            if (start == index) throw IllegalArgumentException("expected number")
-            return sanitized.substring(start, index).toDouble()
+
+            fun parseTerm(): Double {
+                var value = parseFactor()
+                while (index < s.length && (peek() == '*' || peek() == '/')) {
+                    val op = peek(); skip()
+                    val rhs = parseFactor()
+                    value = if (op == '*') value * rhs else value / rhs
+                }
+                return value
+            }
+
+            fun parseFactor(): Double {
+                while (index < s.length && peek() == ' ') skip()
+                if (index >= s.length) throw IllegalArgumentException("unexpected end")
+                if (peek() == '(') {
+                    skip()
+                    val value = parseExpression()
+                    if (index < s.length && peek() == ')') skip()
+                    return value
+                }
+                if (peek() == '-') { skip(); return -parseFactor() }
+                val start = index
+                while (index < s.length && (peek().isDigit() || peek() == '.')) skip()
+                if (start == index) throw IllegalArgumentException("expected number")
+                return s.substring(start, index).toDouble()
+            }
         }
-        return parseExpression()
+
+        return Parser(sanitized).parseExpression()
     }
 }
 

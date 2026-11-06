@@ -51,7 +51,7 @@ data class ToolDefinition(
     val inputSchema: String = "{}",
     val requiresApproval: Boolean = risk != ToolRisk.READ_ONLY
 ) {
-    val qualifiedName: String get() = "$serverId__$name"
+    val qualifiedName: String get() = "${serverId}__$name"
 }
 
 data class ToolCall(

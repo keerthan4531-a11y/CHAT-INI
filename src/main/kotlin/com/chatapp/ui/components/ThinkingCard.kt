@@ -1,6 +1,7 @@
 package com.chatapp.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
@@ -92,7 +93,7 @@ fun ThinkingCard(
         }
         AnimatedVisibility(
             visible = expanded,
-            enter = fadeIn() + shrinkVertically(),
+            enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
             Column {

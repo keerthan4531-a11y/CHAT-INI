@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.geometry.Outline
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -62,11 +63,11 @@ class WobblyShape(
         layoutDirection: LayoutDirection,
         density: Density
     ): Outline {
-        val r = radius.toPx(density)
+        val r = with(density) { radius.toPx() }
         val w = size.width
         val h = size.height
         val amp = 1.4f * density.density
-        fun j(n: Int): Float = (sin((seed + n) * 12.9898) * 0.5 + 0.5) * 2f * amp - amp
+        fun j(n: Int): Float = ((sin((seed + n) * 12.9898) * 0.5 + 0.5) * 2.0 * amp - amp).toFloat()
         val path = Path().apply {
             moveTo(r + j(1), j(2))
             lineTo(w - r + j(3), j(4))

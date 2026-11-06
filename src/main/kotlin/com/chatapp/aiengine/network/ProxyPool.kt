@@ -15,7 +15,7 @@ import okhttp3.Authenticator
 import okhttp3.ConnectionPool
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
-import okhttp3.Proxy
+import java.net.Proxy
 import okhttp3.Request
 import java.net.InetSocketAddress
 import java.util.UUID

@@ -50,10 +50,10 @@ class McpClient(
         .build()
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var transport: McpTransport? = null
+    private var transport: TransportConnection? = null
     private var readerJob: Job? = null
-    private val pending = ConcurrentHashMap<String, CompletableDeferred<JsonObject>>()
-    private val notifications = ConcurrentHashMap<String, (params: JsonObject?) -> Unit>()
+    private val pending = ConcurrentHashMap<String, CompletableDeferred<JSONObject>>()
+    private val notifications = ConcurrentHashMap<String, (params: JSONObject?) -> Unit>()
 
     @Volatile
     var connected: Boolean = false
@@ -99,7 +99,7 @@ class McpClient(
                 }
             )
             if (init.optJSONObject("result") == null && init.has("error")) {
-                throw IllegalStateException(init.optString("error", "initialize failed"))
+                throw Exception(init.optString("error", "initialize failed"))
             }
             transport?.notify("notifications/initialized", null)
 
@@ -169,7 +169,7 @@ class McpClient(
         }
     }
 
-    suspend fun close() = withContext(Dispatchers.IO) {
+    suspend fun close(): Unit = withContext(Dispatchers.IO) {
         runCatching { transport?.request("shutdown", null) }
         runCatching { transport?.close() }
         readerJob?.cancel()
@@ -194,14 +194,14 @@ class McpClient(
     // Transports
     // ------------------------------------------------------------------
 
-    private interface McpTransport {
+    private interface TransportConnection {
         suspend fun start()
-        suspend fun request(method: String, params: Any?): JsonObject
+        suspend fun request(method: String, params: Any?): JSONObject
         suspend fun notify(method: String, params: Any?)
         suspend fun close()
     }
 
-    private inner class StdioTransport(config: McpServerConfig) : McpTransport {
+    private inner class StdioTransport(config: McpServerConfig) : TransportConnection {
         private lateinit var process: Process
         private lateinit var writer: java.io.OutputStream
 
@@ -209,7 +209,7 @@ class McpClient(
             val builder = ProcessBuilder(config.command, *config.args.toTypedArray())
             builder.environment().putAll(config.env)
             builder.environment().putIfAbsent("PATH", System.getenv("PATH") ?: "/usr/bin:/bin:/usr/local/bin")
-            builder.redirectError(ProcessBuilder.Redirect.DISCARD)
+            builder.redirectErrorStream(true)
             process = builder.start()
             writer = process.outputStream
             readerJob = launch {
@@ -222,9 +222,9 @@ class McpClient(
             }
         }
 
-        override suspend fun request(method: String, params: Any?): JsonObject = withContext(Dispatchers.IO) {
+        override suspend fun request(method: String, params: Any?): JSONObject = withContext(Dispatchers.IO) {
             val id = UUID.randomUUID().toString()
-            val deferred = CompletableDeferred<JsonObject>()
+            val deferred = CompletableDeferred<JSONObject>()
             pending[id] = deferred
             val payload = JSONObject()
                 .put("jsonrpc", "2.0")
@@ -236,11 +236,11 @@ class McpClient(
                 withTimeout(45_000) { deferred.await() }
             } catch (e: TimeoutCancellationException) {
                 pending.remove(id)
-                throw IllegalStateException("MCP request timed out: $method")
+                throw Exception("MCP request timed out: $method")
             }
         }
 
-        override suspend fun notify(method: String, params: Any?) = withContext(Dispatchers.IO) {
+        override suspend fun notify(method: String, params: Any?): Unit = withContext(Dispatchers.IO) {
             val payload = JSONObject().put("jsonrpc", "2.0").put("method", method)
             if (params != null) payload.put("params", params)
             write(payload)
@@ -251,23 +251,24 @@ class McpClient(
             writer.flush()
         }
 
-        override suspend fun close() = withContext(Dispatchers.IO) {
+        override suspend fun close(): Unit = withContext(Dispatchers.IO) {
             runCatching { process.destroy() }
             runCatching { process.waitFor(3, TimeUnit.SECONDS) }
+            Unit
         }
     }
 
     private inner class HttpTransport(
         config: McpServerConfig,
         private val client: OkHttpClient
-    ) : McpTransport {
+    ) : TransportConnection {
         private var sessionId: String? = null
 
         override suspend fun start() {
             // The initialize request happens through request(); nothing to do here.
         }
 
-        override suspend fun request(method: String, params: Any?): JsonObject = withContext(Dispatchers.IO) {
+        override suspend fun request(method: String, params: Any?): JSONObject = withContext(Dispatchers.IO) {
             val payload = JSONObject()
                 .put("jsonrpc", "2.0")
                 .put("id", UUID.randomUUID().toString())
@@ -284,11 +285,11 @@ class McpClient(
             client.newCall(builder.build()).execute().use { response ->
                 response.headers["Mcp-Session-Id"]?.let { sessionId = it }
                 if (!response.isSuccessful) {
-                    throw IllegalStateException("MCP HTTP ${response.code}: ${response.message}")
+                    throw Exception("MCP HTTP ${response.code}: ${response.message}")
                 }
                 val contentType = response.header("Content-Type").orEmpty()
                 val raw = if (contentType.contains("text/event-stream")) {
-                    readSse(response.body?.byteStream() ?: throw IllegalStateException("empty MCP body"))
+                    readSse(response.body?.byteStream() ?: throw Exception("empty MCP body"))
                 } else {
                     response.body?.string() ?: "{}"
                 }
@@ -316,7 +317,7 @@ class McpClient(
             return data.toString().ifEmpty { "{}" }
         }
 
-        override suspend fun notify(method: String, params: Any?) = withContext(Dispatchers.IO) {
+        override suspend fun notify(method: String, params: Any?): Unit = withContext(Dispatchers.IO) {
             val payload = JSONObject().put("jsonrpc", "2.0").put("method", method)
             if (params != null) payload.put("params", params)
             val builder = Request.Builder()
@@ -327,6 +328,7 @@ class McpClient(
             config.headers.forEach { (key, value) -> builder.header(key, value) }
             sessionId?.let { builder.header("Mcp-Session-Id", it) }
             runCatching { client.newCall(builder.build()).execute().use { } }
+            Unit
         }
 
         override suspend fun close() = Unit

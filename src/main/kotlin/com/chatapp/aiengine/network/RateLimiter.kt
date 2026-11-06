@@ -4,6 +4,8 @@ import com.chatapp.aiengine.model.LaneUsage
 import com.chatapp.aiengine.model.ProxyEndpoint
 import com.chatapp.aiengine.model.RateLimitPolicy
 import com.chatapp.aiengine.model.RateLimitResult
+import com.chatapp.aiengine.model.RateLimitResult.Allowed
+import com.chatapp.aiengine.model.RateLimitResult.Rejected
 import com.chatapp.aiengine.model.UsageSnapshot
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong

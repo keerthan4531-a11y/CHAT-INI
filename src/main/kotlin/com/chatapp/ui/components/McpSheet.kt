@@ -1,5 +1,6 @@
 package com.chatapp.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -303,7 +304,7 @@ fun McpSheet(
                                             server.copy(
                                                 enabled = true,
                                                 env = mapOf(
-                                                    if (server.id == "notion") "NOTION_TOKEN" else "SLACK_BOT_TOKEN" to token
+                                                    (if (server.id == "notion") "NOTION_TOKEN" else "SLACK_BOT_TOKEN") to token
                                                 ),
                                                 headers = mapOf("Authorization" to "Bearer $token")
                                             )

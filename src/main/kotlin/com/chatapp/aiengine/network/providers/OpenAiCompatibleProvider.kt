@@ -68,8 +68,8 @@ class OpenAiCompatibleProvider(
             reqBuilder.header("Authorization", "Bearer $apiKey")
         }
 
-        val client = proxyPool?.httpClientFor(request.proxy) ?: this.client
-        val call = client.newCall(reqBuilder.build())
+        val activeClient = proxyPool?.httpClientFor(request.proxy) ?: this@OpenAiCompatibleProvider.client
+        val call = activeClient.newCall(reqBuilder.build())
 
         val parser = ThinkingStreamParser { event ->
             trySend(event)

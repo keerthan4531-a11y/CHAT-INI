@@ -152,7 +152,7 @@ class AiChatRepositoryImpl(
         val serverIds = (if (requestedServers.isEmpty()) enabled.map { it.id }.toSet() else requestedServers) + "pawpal"
 
         val brain = LlmAgentBrain(
-            repository = this,
+            repository = this@AiChatRepositoryImpl,
             model = request.model,
             proxy = selection.proxy,
             ipKey = request.ipKey
@@ -257,7 +257,7 @@ class AiChatRepositoryImpl(
 
     override fun resetUsage() = proxyPool.resetUsage()
 
-    fun memoryFacts(): List<MemoryFact> = memory.allFacts()
+    override fun memoryFacts(): List<MemoryFact> = memory.allFacts()
 
-    fun clearMemory() = memory.clear()
+    override fun clearMemory() = memory.clear()
 }

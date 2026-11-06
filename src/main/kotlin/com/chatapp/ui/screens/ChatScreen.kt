@@ -120,8 +120,9 @@ private fun ChatScreenContent(
     val width = LocalConfiguration.current.screenWidthDp
 
     LaunchedEffect(uiState.messages.size, uiState.liveContentText, uiState.isGenerating) {
-        if ((uiState.messages.isNotEmpty() || uiState.isGenerating) && listState.itemCount > 0) {
-            listState.animateScrollToItem(listState.itemCount - 1)
+        val total = listState.layoutInfo.totalItemsCount
+        if ((uiState.messages.isNotEmpty() || uiState.isGenerating) && total > 0) {
+            listState.animateScrollToItem(total - 1)
         }
     }
 

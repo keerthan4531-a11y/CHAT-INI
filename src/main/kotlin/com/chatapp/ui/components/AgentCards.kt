@@ -3,6 +3,7 @@ package com.chatapp.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
@@ -130,7 +131,7 @@ fun AgentPlanCard(
         Spacer(Modifier.height(2.dp))
         AnimatedVisibility(
             visible = expanded,
-            enter = fadeIn() + shrinkVertically(),
+            enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
             Column {
@@ -325,7 +326,7 @@ fun ToolCallCard(
         }
         AnimatedVisibility(
             visible = expanded,
-            enter = fadeIn() + shrinkVertically(),
+            enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
             Column {
@@ -348,14 +349,14 @@ fun ToolCallCard(
                     )
                     Spacer(Modifier.height(5.dp))
                 }
-                if (call.result.isNotBlank()) {
+                if (!call.result.isNullOrBlank()) {
                     Text(
                         text = "result",
                         style = MaterialTheme.typography.labelSmall,
                         color = colors.inkMute
                     )
                     Text(
-                        text = call.result!!.take(700),
+                        text = call.result.orEmpty().take(700),
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
                         color = colors.inkSoft,
@@ -368,7 +369,7 @@ fun ToolCallCard(
                             .padding(7.dp)
                     )
                 }
-                if (call.error.isNotBlank() && call.error != null) {
+                if (!call.error.isNullOrBlank()) {
                     Spacer(Modifier.height(5.dp))
                     Text(
                         text = "⚠️ ${call.error}",

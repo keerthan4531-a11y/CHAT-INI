@@ -2,7 +2,7 @@ package com.chatapp.ui.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.State
+import androidx.compose.runtime.State
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
@@ -30,6 +30,9 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
@@ -37,6 +40,51 @@ import androidx.compose.ui.unit.dp
 import com.chatapp.ui.theme.LocalPawPalColors
 import kotlin.math.cos
 import kotlin.math.sin
+
+private fun DrawScope.drawOval(
+    rect: Rect,
+    color: Color,
+    style: androidx.compose.ui.graphics.drawscope.DrawStyle = androidx.compose.ui.graphics.drawscope.Fill
+) {
+    drawOval(
+        color = color,
+        topLeft = Offset(rect.left, rect.top),
+        size = androidx.compose.ui.geometry.Size(rect.width, rect.height),
+        style = style
+    )
+}
+
+private fun DrawScope.drawOval(
+    color: Color,
+    rect: Rect,
+    style: androidx.compose.ui.graphics.drawscope.DrawStyle = androidx.compose.ui.graphics.drawscope.Fill
+) {
+    drawOval(
+        color = color,
+        topLeft = Offset(rect.left, rect.top),
+        size = androidx.compose.ui.geometry.Size(rect.width, rect.height),
+        style = style
+    )
+}
+
+private fun DrawScope.drawArc(
+    color: Color,
+    rect: Rect,
+    startAngle: Float,
+    sweepAngle: Float,
+    useCenter: Boolean,
+    style: androidx.compose.ui.graphics.drawscope.DrawStyle = androidx.compose.ui.graphics.drawscope.Fill
+) {
+    drawArc(
+        color = color,
+        startAngle = startAngle,
+        sweepAngle = sweepAngle,
+        useCenter = useCenter,
+        topLeft = Offset(rect.left, rect.top),
+        size = androidx.compose.ui.geometry.Size(rect.width, rect.height),
+        style = style
+    )
+}
 
 enum class CatMood {
     IDLE,
@@ -84,7 +132,7 @@ private data class CatMotion(
     val tail: Float,
     val breathe: Float,
     val blink: Float,
-    earTwitch: Float,
+    val earTwitch: Float,
     val float: Float,
     val typing: Float,
     val bounce: Float
@@ -522,15 +570,13 @@ private fun DrawScope.drawText(
     size: Float
 ) {
     if (size <= 1f) return
-    drawIntoCanvas { canvas ->
-        val paint = android.graphics.Paint().apply {
-            this.color = color.toArgb()
-            textSize = size
-            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-            isAntiAlias = true
-        }
-        canvas.nativeCanvas.drawText(text, x, y, paint)
+    val paint = android.graphics.Paint().apply {
+        this.color = color.toArgb()
+        textSize = size
+        typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+        isAntiAlias = true
     }
+    drawContext.canvas.nativeCanvas.drawText(text, x, y, paint)
 }
 
 /**

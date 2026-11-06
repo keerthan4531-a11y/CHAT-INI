@@ -67,6 +67,7 @@ fun MessageBubble(
     modifier: Modifier = Modifier,
     isLiveStreaming: Boolean = false,
     liveThinkingText: String = "",
+    liveContentText: String = "",
     isThinkingActive: Boolean = false,
     livePlan: AgentPlan? = null,
     liveToolCalls: List<ToolCall> = emptyList(),
