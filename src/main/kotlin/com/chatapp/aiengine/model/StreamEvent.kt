@@ -66,6 +66,53 @@ sealed interface StreamEvent {
         val finalMessage: ChatMessage
     ) : StreamEvent
 
+    // ---------------------------------------------------------------------
+    // Agent / tool events
+    // ---------------------------------------------------------------------
+
+    /** The agent finished decomposing the goal into a reviewable plan. */
+    data class AgentPlanUpdated(val plan: AgentPlan) : StreamEvent
+
+    /** A single plan step started running. */
+    data class AgentStepStarted(val step: AgentStep) : StreamEvent
+
+    /** A single plan step finished (done / failed / skipped). */
+    data class AgentStepCompleted(val step: AgentStep) : StreamEvent
+
+    /** The agent wants to invoke a tool. */
+    data class ToolCallStarted(val call: ToolCall) : StreamEvent
+
+    /** A tool returned (or failed). */
+    data class ToolCallCompleted(val call: ToolCall) : StreamEvent
+
+    /** A write/destructive tool needs the human to approve it first. */
+    data class ToolApprovalRequested(val call: ToolCall) : StreamEvent
+
+    /** A new source was discovered by web search or a tool. */
+    data class CitationAdded(val citation: WebCitation) : StreamEvent
+
+    /** The agent learned something worth remembering. */
+    data class MemoryUpdated(val fact: MemoryFact) : StreamEvent
+
+    /** A proxy lane was selected for this request. */
+    data class ProxyRotated(val proxy: ProxyEndpoint?) : StreamEvent
+
+    /** Live quota snapshot for the UI meter. */
+    data class UsageUpdated(val snapshot: UsageSnapshot) : StreamEvent
+
+    /** The per-IP / proxy-pool budget is exhausted. */
+    data class RateLimitReached(
+        val snapshot: UsageSnapshot,
+        val retryAt: Long
+    ) : StreamEvent
+
+    /** Agent finished with its plan + usage attached. */
+    data class AgentCompleted(
+        val finalMessage: ChatMessage,
+        val plan: AgentPlan,
+        val usage: UsageSnapshot
+    ) : StreamEvent
+
     /**
      * Fired when a network error, timeout, or parsing failure occurs.
      */

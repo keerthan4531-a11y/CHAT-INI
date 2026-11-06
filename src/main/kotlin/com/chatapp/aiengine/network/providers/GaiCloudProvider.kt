@@ -4,6 +4,7 @@ import com.chatapp.aiengine.core.AiProvider
 import com.chatapp.aiengine.core.ThinkingStreamParser
 import com.chatapp.aiengine.model.*
 import com.chatapp.aiengine.network.HttpClientProvider
+import com.chatapp.aiengine.network.ProxyPool
 import com.chatapp.aiengine.network.SseStreamReader
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -31,7 +32,8 @@ import javax.crypto.spec.SecretKeySpec
  */
 class GaiCloudProvider(
     private val client: OkHttpClient = HttpClientProvider.defaultClient,
-    private val baseUrl: String = "https://api.chatgai.fun"
+    private val baseUrl: String = "https://api.chatgai.fun",
+    private val proxyPool: ProxyPool? = null
 ) : AiProvider {
 
     override val providerType: ProviderType = ProviderType.GAI_CLOUD
@@ -117,6 +119,8 @@ class GaiCloudProvider(
             .header("content-type", "application/json")
             .build()
 
+        // Rotate through the proxy pool when a lane was assigned by the repository.
+        val client = proxyPool?.httpClientFor(request.proxy) ?: this.client
         val call = client.newCall(httpRequest)
 
         // Parser automatically splits <think>...</think> tokens from normal content tokens!

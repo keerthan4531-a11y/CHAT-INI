@@ -14,3 +14,10 @@ out/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Android / local
+local.properties
+*.jks
+*.keystore
+captures/
+*.log
