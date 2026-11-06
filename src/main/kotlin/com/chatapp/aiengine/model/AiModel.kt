@@ -180,19 +180,19 @@ data class AiModel(
          * Full default registry of supported models.
          */
         val DEFAULT_MODELS = listOf(
+            GLM_5_3_FLASH,
             GPT_4O,
-            GPT_4_1_MINI,
-            GPT_6_LUNA,
-            GEMINI_3_FLASH,
-            GEMINI_3_5_LITE,
             DEEPSEEK_V3,
-            DEEPSEEK_V4_FLASH,
-            CLAUDE_HAIKU,
-            CLAUDE_SONNET_4_5,
+            GEMINI_3_FLASH,
             GROK_4,
+            CLAUDE_HAIKU,
+            GPT_4_1_MINI,
+            GEMINI_3_5_LITE,
+            DEEPSEEK_V4_FLASH,
+            GPT_6_LUNA,
+            CLAUDE_SONNET_4_5,
             GROK_4_1,
             GEMINI_3_PRO,
-            GLM_5_3_FLASH,
             DEEPSEEK_R1_OFFICIAL
         )
 

@@ -38,9 +38,9 @@ enum class SheetKind { NONE, MODEL, MCP, PROXY, USAGE, SETTINGS }
  */
 data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
-    val selectedModel: AiModel = AiModel.GROK_4_1,
-    val mode: AgentMode = AgentMode.AGENT,
-    val isWebSearchEnabled: Boolean = true,
+    val selectedModel: AiModel = AiModel.GPT_4O,
+    val mode: AgentMode = AgentMode.CHAT,
+    val isWebSearchEnabled: Boolean = false,
     val isThinkEnabled: Boolean = false,
     val isDeepMode: Boolean = false,
     val isGenerating: Boolean = false,
@@ -119,7 +119,7 @@ class ChatViewModelExample(
 
     fun selectModel(model: AiModel) {
         engine.repository.setActiveModel(model)
-        _uiState.update { it.copy(selectedModel = model) }
+        _uiState.update { it.copy(selectedModel = model, errorMessage = null) }
     }
 
     fun setMode(mode: AgentMode) {

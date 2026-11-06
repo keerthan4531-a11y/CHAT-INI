@@ -104,18 +104,55 @@ class OxAlphaProvider(
         }
 
         val messagesArray = JSONArray()
-        // Include multi-turn conversation history
+        // Ox Alpha strictly requires alternating "user" and "assistant" roles.
+        // It rejects "system" role with HTTP 422 {"error":"Invalid messages"}.
+        // Any system messages are merged into the user prompt.
+        val systemNotes = mutableListOf<String>()
+        val sanitized = mutableListOf<Pair<String, StringBuilder>>()
+
         for (msg in request.history) {
+            val content = msg.content.trim()
+            if (content.isEmpty()) continue
+            if (msg.role == ChatRole.SYSTEM) {
+                systemNotes.add(content)
+            } else {
+                val role = if (msg.role == ChatRole.ASSISTANT) "assistant" else "user"
+                if (sanitized.isNotEmpty() && sanitized.last().first == role) {
+                    sanitized.last().second.append("\n\n").append(content)
+                } else {
+                    sanitized.add(role to StringBuilder(content))
+                }
+            }
+        }
+
+        // Now handle the current prompt
+        val currentPrompt = request.prompt.trim()
+        if (sanitized.isNotEmpty() && sanitized.last().first == "user") {
+            sanitized.last().second.append("\n\n").append(currentPrompt)
+        } else {
+            sanitized.add("user" to StringBuilder(currentPrompt))
+        }
+
+        // If there were system prompts, prepend to the very first user message
+        if (systemNotes.isNotEmpty()) {
+            val firstUserIndex = sanitized.indexOfFirst { it.first == "user" }
+            if (firstUserIndex != -1) {
+                val combinedSystem = systemNotes.joinToString("\n\n")
+                sanitized[firstUserIndex].second.insert(0, "$combinedSystem\n\n")
+            }
+        }
+
+        // Must start with user
+        while (sanitized.isNotEmpty() && sanitized.first().first != "user") {
+            sanitized.removeAt(0)
+        }
+
+        for ((role, sb) in sanitized) {
             messagesArray.put(JSONObject().apply {
-                put("role", msg.role.name.lowercase())
-                put("content", msg.content)
+                put("role", role)
+                put("content", sb.toString())
             })
         }
-        // Current user prompt
-        messagesArray.put(JSONObject().apply {
-            put("role", "user")
-            put("content", request.prompt)
-        })
 
         val payload = JSONObject().apply {
             put("model", request.model.id)
@@ -142,7 +179,13 @@ class OxAlphaProvider(
         try {
             call.execute().use { response ->
                 if (!response.isSuccessful) {
-                    val err = Exception("Ox Alpha returned HTTP ${response.code}: ${response.message}")
+                    val rawError = response.body?.string().orEmpty()
+                    if (response.code == 419 || response.code == 401 || response.code == 428) {
+                        currentCsrfToken = null
+                        cookieJar.clear()
+                    }
+                    val detail = if (rawError.isNotBlank()) rawError.take(180) else response.message
+                    val err = Exception("Ox Alpha returned HTTP ${response.code}: $detail")
                     trySend(StreamEvent.Error(err))
                     close(err)
                     return@callbackFlow
