@@ -32,7 +32,12 @@ enum class ProviderType {
     /**
      * Standard OpenAI/DeepSeek/OpenRouter compatible SSE endpoint.
      */
-    OPENAI_COMPATIBLE
+    OPENAI_COMPATIBLE,
+
+    /**
+     * Standalone AI Video Generation service (Sora / Aritek T2V v1.9.3).
+     */
+    ARITEK_T2V
 }
 
 /**
@@ -501,11 +506,24 @@ data class AiModel(
             description = "High-speed zero-rate-limit failover via Zyra Cloud Functions"
         )
 
+        // ==========================================
+        // ARITEK SORA AI VIDEO GENERATOR
+        // ==========================================
+        val SORA_T2V = AiModel(
+            id = "sora-t2v",
+            displayName = "Sora AI Video (T2V)",
+            providerType = ProviderType.ARITEK_T2V,
+            supportsReasoning = false,
+            supportsWebSearch = false,
+            description = "Generates high quality real MP4 videos from text descriptions"
+        )
+
         /**
          * Full default registry of supported models.
          */
         val DEFAULT_MODELS = listOf(
             GPT_6,
+            SORA_T2V,
             CLAUDE_3_7_SONNET,
             DEEPSEEK_R1_ONESEARCH,
             CLAUDE_OPUS_4_6,

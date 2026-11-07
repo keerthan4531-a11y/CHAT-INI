@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -195,6 +196,13 @@ fun MessageBubble(
                         text = content,
                         modifier = Modifier.padding(top = 6.dp)
                     )
+                    val videoUrlMatch = remember(content) {
+                        Regex("https?://[^\\s\"')]+\\.mp4").find(content)?.value
+                    }
+                    if (videoUrlMatch != null) {
+                        Spacer(Modifier.height(8.dp))
+                        VideoAttachmentCard(videoUrl = videoUrlMatch)
+                    }
                     if (isLiveStreaming) {
                         Spacer(Modifier.height(4.dp))
                         StreamingCursor()
@@ -311,6 +319,47 @@ fun StreamingCursor(modifier: Modifier = Modifier) {
             .clip(RoundedCornerShape(2.dp))
             .background(colors.coral.copy(alpha = alpha))
     )
+}
+
+/** Tappable video card shown when an MP4 video URL is present in the response. */
+@Composable
+fun VideoAttachmentCard(videoUrl: String, modifier: Modifier = Modifier) {
+    val colors = LocalPawPalColors.current
+    val uriHandler = LocalUriHandler.current
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(colors.butterSoft)
+            .border(1.dp, colors.coral.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .clickable { uriHandler.openUri(videoUrl) }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(colors.coral),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = "▶", color = Color.White, style = MaterialTheme.typography.titleMedium)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "AI Generated MP4 Video",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = colors.ink
+            )
+            Text(
+                text = "Tap to open & play video in full quality",
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.inkSoft
+            )
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

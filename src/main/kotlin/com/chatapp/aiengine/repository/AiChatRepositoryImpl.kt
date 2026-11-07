@@ -23,6 +23,7 @@ import com.chatapp.aiengine.model.ToolDefinition
 import com.chatapp.aiengine.model.UsageSnapshot
 import com.chatapp.aiengine.network.ProxyPool
 import com.chatapp.aiengine.network.RateLimiter
+import com.chatapp.aiengine.network.providers.AritekT2vProvider
 import com.chatapp.aiengine.network.providers.ChatGptFreeProvider
 import com.chatapp.aiengine.network.providers.GaiCloudProvider
 import com.chatapp.aiengine.network.providers.OneSearchProvider
@@ -77,6 +78,7 @@ class AiChatRepositoryImpl(
         toolRegistry.registerAll(builtIns.definitions())
         providers = listOf(
             ChatGptFreeProvider(baseUrl = config.chatGptFreeBaseUrl, proxyPool = proxyPool),
+            AritekT2vProvider(proxyPool = proxyPool),
             OneSearchProvider(proxyPool = proxyPool),
             ZyraProvider(proxyPool = proxyPool),
             GaiCloudProvider(baseUrl = config.gaiBaseUrl, proxyPool = proxyPool),
