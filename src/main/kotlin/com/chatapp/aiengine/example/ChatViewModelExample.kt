@@ -38,7 +38,7 @@ enum class SheetKind { NONE, MODEL, MCP, PROXY, USAGE, SETTINGS }
  */
 data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
-    val selectedModel: AiModel = AiModel.GPT_4O,
+    val selectedModel: AiModel = AiModel.GPT_6,
     val mode: AgentMode = AgentMode.CHAT,
     val isWebSearchEnabled: Boolean = false,
     val isThinkEnabled: Boolean = false,

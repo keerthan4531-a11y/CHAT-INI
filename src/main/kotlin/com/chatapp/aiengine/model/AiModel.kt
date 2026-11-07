@@ -5,6 +5,11 @@ package com.chatapp.aiengine.model
  */
 enum class ProviderType {
     /**
+     * ChatGPT Free endpoint (https://chatgpt-proxy-chi-five.vercel.app/v1/chat/completions).
+     */
+    CHATGPT_FREE,
+
+    /**
      * Direct cloud endpoint with native AES encryption (GPT, Gemini, DeepSeek, Grok, Claude Haiku).
      */
     GAI_CLOUD,
@@ -43,6 +48,16 @@ data class AiModel(
     val description: String = ""
 ) {
     companion object {
+        // --- ChatGPT Free Models (Default) ---
+        val GPT_6 = AiModel(
+            id = "gpt6",
+            displayName = "GPT-6",
+            providerType = ProviderType.CHATGPT_FREE,
+            supportsReasoning = true,
+            supportsWebSearch = true,
+            description = "Flagship GPT-6 via high-speed ChatGPT Free proxy"
+        )
+
         // --- Gai Cloud Models (Direct Cloud, No Laptop Needed) ---
         val GPT_4O = AiModel(
             id = "GPT:4o",
@@ -243,6 +258,7 @@ data class AiModel(
          * Full default registry of supported models.
          */
         val DEFAULT_MODELS = listOf(
+            GPT_6,
             GLM_5_3_FLASH,
             GPT_4O,
             DEEPSEEK_V3,

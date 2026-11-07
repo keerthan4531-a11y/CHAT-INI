@@ -92,15 +92,13 @@ class OxAlphaProvider(
     override fun streamChat(request: ChatRequest): Flow<StreamEvent> = callbackFlow {
         trySend(StreamEvent.Started(request.model, request.conversationId))
 
-        // Auto-initialize session if needed or if forced
-        if (currentCsrfToken == null || request.forceNewSession) {
-            val ok = initFreshSession(request.proxy)
-            if (!ok || currentCsrfToken == null) {
-                val err = Exception("Failed to initialize Ox Alpha session / CSRF token.")
-                trySend(StreamEvent.Error(err))
-                close(err)
-                return@callbackFlow
-            }
+        // Always initialize a fresh guest session to reset messages_today and prevent Turnstile 428
+        val ok = initFreshSession(request.proxy)
+        if (!ok || currentCsrfToken == null) {
+            val err = Exception("Failed to initialize Ox Alpha session / CSRF token.")
+            trySend(StreamEvent.Error(err))
+            close(err)
+            return@callbackFlow
         }
 
         val messagesArray = JSONArray()
@@ -180,12 +178,16 @@ class OxAlphaProvider(
             call.execute().use { response ->
                 if (!response.isSuccessful) {
                     val rawError = response.body?.string().orEmpty()
-                    if (response.code == 419 || response.code == 401 || response.code == 428) {
-                        currentCsrfToken = null
-                        cookieJar.clear()
+                    currentCsrfToken = null
+                    cookieJar.clear()
+                    val detail = if (response.code == 428) {
+                        "Cloudflare verification checkpoint reached on Ox Alpha. Please switch to GPT-6 (Default) or GPT-4o."
+                    } else if (rawError.isNotBlank()) {
+                        rawError.take(180)
+                    } else {
+                        response.message
                     }
-                    val detail = if (rawError.isNotBlank()) rawError.take(180) else response.message
-                    val err = Exception("Ox Alpha returned HTTP ${response.code}: $detail")
+                    val err = Exception(if (response.code == 428) detail else "Ox Alpha returned HTTP ${response.code}: $detail")
                     trySend(StreamEvent.Error(err))
                     close(err)
                     return@callbackFlow

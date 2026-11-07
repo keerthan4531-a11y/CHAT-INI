@@ -23,7 +23,7 @@ import com.chatapp.aiengine.network.ProxyPool
  * @property memoryFile Optional JSON file for durable agent memory.
  */
 data class AiEngineConfig(
-    val defaultModel: AiModel = AiModel.GPT_4O,
+    val defaultModel: AiModel = AiModel.GPT_6,
     val isWebSearchDefaultEnabled: Boolean = false,
     val defaultMode: AgentMode = AgentMode.CHAT,
     val agentBudget: AgentBudget = AgentBudget(),
@@ -34,6 +34,7 @@ data class AiEngineConfig(
     val requireApprovalForWrites: Boolean = true,
     val autoApproveReadOnlyTools: Boolean = true,
     val memoryFile: String? = null,
+    val chatGptFreeBaseUrl: String = "https://chatgpt-proxy-chi-five.vercel.app",
     val gaiBaseUrl: String = "https://api.chatgai.fun",
     val oxAlphaBaseUrl: String = "https://oxalpha.com",
     val openAiEndpoint: String = "https://api.deepseek.com/chat/completions",
