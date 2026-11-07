@@ -25,8 +25,10 @@ import com.chatapp.aiengine.network.ProxyPool
 import com.chatapp.aiengine.network.RateLimiter
 import com.chatapp.aiengine.network.providers.ChatGptFreeProvider
 import com.chatapp.aiengine.network.providers.GaiCloudProvider
+import com.chatapp.aiengine.network.providers.OneSearchProvider
 import com.chatapp.aiengine.network.providers.OpenAiCompatibleProvider
 import com.chatapp.aiengine.network.providers.OxAlphaProvider
+import com.chatapp.aiengine.network.providers.ZyraProvider
 import com.chatapp.aiengine.core.AiProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -75,6 +77,8 @@ class AiChatRepositoryImpl(
         toolRegistry.registerAll(builtIns.definitions())
         providers = listOf(
             ChatGptFreeProvider(baseUrl = config.chatGptFreeBaseUrl, proxyPool = proxyPool),
+            OneSearchProvider(proxyPool = proxyPool),
+            ZyraProvider(proxyPool = proxyPool),
             GaiCloudProvider(baseUrl = config.gaiBaseUrl, proxyPool = proxyPool),
             OxAlphaProvider(baseUrl = config.oxAlphaBaseUrl, proxyPool = proxyPool),
             OpenAiCompatibleProvider(
