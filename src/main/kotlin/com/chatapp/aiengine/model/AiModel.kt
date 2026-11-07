@@ -507,7 +507,7 @@ data class AiModel(
         )
 
         // ==========================================
-        // ARITEK SORA AI VIDEO GENERATOR
+        // ARITEK AI VIDEO ENGINES (Sora / Pet / Fusion)
         // ==========================================
         val SORA_T2V = AiModel(
             id = "sora-t2v",
@@ -515,7 +515,25 @@ data class AiModel(
             providerType = ProviderType.ARITEK_T2V,
             supportsReasoning = false,
             supportsWebSearch = false,
-            description = "Generates high quality real MP4 videos from text descriptions"
+            description = "Generates high quality real MP4 videos from text descriptions (~2.5s)"
+        )
+
+        val PET_CARTOON_T2V = AiModel(
+            id = "pet-cartoon-t2v",
+            displayName = "Cartoon & Pet Video (T2P)",
+            providerType = ProviderType.ARITEK_T2V,
+            supportsReasoning = false,
+            supportsWebSearch = false,
+            description = "Creates cute cartoon & pet animation MP4 videos in ~3.5s"
+        )
+
+        val FUSION_MERGE_T2V = AiModel(
+            id = "fusion-merge-t2v",
+            displayName = "Character Merge Video (Fusion)",
+            providerType = ProviderType.ARITEK_T2V,
+            supportsReasoning = false,
+            supportsWebSearch = false,
+            description = "Complex character merge & video mix (Queue processing ~100s)"
         )
 
         /**
@@ -524,6 +542,8 @@ data class AiModel(
         val DEFAULT_MODELS = listOf(
             GPT_6,
             SORA_T2V,
+            PET_CARTOON_T2V,
+            FUSION_MERGE_T2V,
             CLAUDE_3_7_SONNET,
             DEEPSEEK_R1_ONESEARCH,
             CLAUDE_OPUS_4_6,
