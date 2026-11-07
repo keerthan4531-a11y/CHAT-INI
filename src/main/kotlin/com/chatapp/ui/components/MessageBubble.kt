@@ -186,12 +186,19 @@ fun MessageBubble(
                     )
                 }
 
-                val content = if (isLiveStreaming) liveContentText else message.content
+                val content = if (isLiveStreaming) {
+                    if (liveContentText.isNotEmpty()) liveContentText else message.content
+                } else message.content
+
                 if (content.isNotBlank()) {
                     MarkdownText(
                         text = content,
                         modifier = Modifier.padding(top = 6.dp)
                     )
+                    if (isLiveStreaming) {
+                        Spacer(Modifier.height(4.dp))
+                        StreamingCursor()
+                    }
                 } else if (isLiveStreaming) {
                     TypingDots(
                         text = when {
@@ -282,6 +289,28 @@ fun TypingDots(
         Spacer(Modifier.width(4.dp))
         Text(text = text, style = HandSmallStyle, color = colors.inkMute, fontSize = 17.sp)
     }
+}
+
+/** Pulsing cursor shown while streaming tokens ChatGPT-style. */
+@Composable
+fun StreamingCursor(modifier: Modifier = Modifier) {
+    val colors = LocalPawPalColors.current
+    val transition = rememberInfiniteTransition(label = "streamingCursor")
+    val alpha by transition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(450),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "cursorAlpha"
+    )
+    Box(
+        modifier = modifier
+            .size(width = 8.dp, height = 15.dp)
+            .clip(RoundedCornerShape(2.dp))
+            .background(colors.coral.copy(alpha = alpha))
+    )
 }
 
 // ---------------------------------------------------------------------------

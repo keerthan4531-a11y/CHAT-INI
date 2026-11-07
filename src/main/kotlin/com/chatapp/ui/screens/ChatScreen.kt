@@ -122,7 +122,7 @@ private fun ChatScreenContent(
     LaunchedEffect(uiState.messages.size, uiState.liveContentText, uiState.isGenerating) {
         val total = listState.layoutInfo.totalItemsCount
         if ((uiState.messages.isNotEmpty() || uiState.isGenerating) && total > 0) {
-            listState.animateScrollToItem(total - 1)
+            listState.scrollToItem(total - 1)
         }
     }
 
@@ -271,6 +271,7 @@ private fun ChatScreenContent(
                                     assistantName = uiState.assistantName,
                                     isLiveStreaming = true,
                                     liveThinkingText = uiState.liveThinkingText,
+                                    liveContentText = uiState.liveContentText,
                                     isThinkingActive = uiState.isThinking,
                                     livePlan = uiState.livePlan,
                                     liveToolCalls = uiState.liveToolCalls,
