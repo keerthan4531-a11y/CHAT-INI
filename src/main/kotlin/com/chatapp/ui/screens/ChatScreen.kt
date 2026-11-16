@@ -198,8 +198,12 @@ private fun ChatScreenContent(
                         isWebSearchEnabled = uiState.isWebSearchEnabled,
                         isAgentMode = uiState.mode == AgentMode.AGENT,
                         isDeepMode = uiState.isDeepMode,
+                        isCatMode = uiState.isCatMode,
+                        isDogMode = uiState.isDogMode,
                         onToggleWebSearch = { viewModel.toggleWebSearch(!uiState.isWebSearchEnabled) },
                         onToggleDeep = { viewModel.toggleDeepMode() },
+                        onToggleCat = { viewModel.toggleCatMode() },
+                        onToggleDog = { viewModel.toggleDogMode() },
                         onToggleAgent = {
                             viewModel.setMode(
                                 if (uiState.mode == AgentMode.AGENT) AgentMode.CHAT else AgentMode.AGENT

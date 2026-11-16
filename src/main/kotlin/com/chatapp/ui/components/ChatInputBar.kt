@@ -3,6 +3,8 @@ package com.chatapp.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chatapp.ui.theme.LocalPawPalColors
@@ -42,9 +45,13 @@ fun ChatInputBar(
     isWebSearchEnabled: Boolean,
     isAgentMode: Boolean,
     isDeepMode: Boolean = false,
+    isCatMode: Boolean = false,
+    isDogMode: Boolean = false,
     onToggleWebSearch: () -> Unit,
     onToggleAgent: () -> Unit,
     onToggleDeep: () -> Unit = {},
+    onToggleCat: () -> Unit = {},
+    onToggleDog: () -> Unit = {},
     onSend: () -> Unit,
     onStop: () -> Unit,
     modifier: Modifier = Modifier,
@@ -63,29 +70,50 @@ fun ChatInputBar(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ToolPill(emoji = "📎", onClick = onAttach, active = false)
-            Spacer(Modifier.width(5.dp))
-            ToolPill(
-                emoji = "🌐",
-                onClick = onToggleWebSearch,
-                active = isWebSearchEnabled,
-                label = "Search"
-            )
-            Spacer(Modifier.width(5.dp))
-            ToolPill(
-                emoji = "🐾",
-                onClick = onToggleAgent,
-                active = isAgentMode,
-                label = "Agent"
-            )
-            Spacer(Modifier.width(5.dp))
-            ToolPill(
-                emoji = "🔬",
-                onClick = onToggleDeep,
-                active = isDeepMode,
-                label = "Deep"
-            )
-            Spacer(Modifier.weight(1f))
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ToolPill(emoji = "📎", onClick = onAttach, active = false)
+                Spacer(Modifier.width(5.dp))
+                ToolPill(
+                    emoji = "🐱",
+                    onClick = onToggleCat,
+                    active = isCatMode,
+                    label = "Cat"
+                )
+                Spacer(Modifier.width(5.dp))
+                ToolPill(
+                    emoji = "🐶",
+                    onClick = onToggleDog,
+                    active = isDogMode,
+                    label = "Dog"
+                )
+                Spacer(Modifier.width(5.dp))
+                ToolPill(
+                    emoji = "🌐",
+                    onClick = onToggleWebSearch,
+                    active = isWebSearchEnabled,
+                    label = "Search"
+                )
+                Spacer(Modifier.width(5.dp))
+                ToolPill(
+                    emoji = "🐾",
+                    onClick = onToggleAgent,
+                    active = isAgentMode,
+                    label = "Agent"
+                )
+                Spacer(Modifier.width(5.dp))
+                ToolPill(
+                    emoji = "🔬",
+                    onClick = onToggleDeep,
+                    active = isDeepMode,
+                    label = "Deep"
+                )
+            }
+            Spacer(Modifier.width(6.dp))
             if (inputText.isNotEmpty()) {
                 Text(
                     text = "${inputText.length}",
@@ -95,9 +123,15 @@ fun ChatInputBar(
                 Spacer(Modifier.width(5.dp))
             }
             Text(
-                text = if (isAgentMode) "agent mode" else "chat mode",
+                text = when {
+                    isAgentMode -> "agent"
+                    isCatMode -> "🐱 cat"
+                    isDogMode -> "🐶 dog"
+                    else -> "chat"
+                },
                 style = MaterialTheme.typography.labelSmall,
-                color = colors.inkMute
+                color = if (isCatMode || isDogMode || isAgentMode) colors.coral else colors.inkMute,
+                fontWeight = if (isCatMode || isDogMode || isAgentMode) FontWeight.Bold else FontWeight.Normal
             )
         }
 

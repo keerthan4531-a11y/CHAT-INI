@@ -63,13 +63,25 @@ data class ChatUiState(
     val darkTheme: Boolean? = null,
     val mascot: Mascot = Mascot.MOCHI,
     val showAnimations: Boolean = true,
+    val isCatMode: Boolean = false,
+    val isDogMode: Boolean = false,
     val pendingApproval: ToolCall? = null,
     val sheet: SheetKind = SheetKind.NONE,
     val isAgentPanelOpen: Boolean = false,
     val lastProxy: ProxyEndpoint? = null
 ) {
-    val assistantName: String get() = if (mascot == Mascot.MOCHI) "Mochi" else "Biscuit"
-    val assistantEmoji: String get() = if (mascot == Mascot.MOCHI) "🐱" else "🐶"
+    val assistantName: String get() = when {
+        isCatMode -> "Mochi 🐱"
+        isDogMode -> "Biscuit 🐶"
+        mascot == Mascot.MOCHI -> "Mochi"
+        else -> "Biscuit"
+    }
+    val assistantEmoji: String get() = when {
+        isCatMode -> "🐱"
+        isDogMode -> "🐶"
+        mascot == Mascot.MOCHI -> "🐱"
+        else -> "🐶"
+    }
     val usagePercent: Float get() = usage?.percent ?: 0f
     val messagesUsed: Int get() = usage?.totalUsed ?: 0
     val messageLimit: Int get() = usage?.totalCapacity ?: 50
@@ -139,6 +151,28 @@ class ChatViewModelExample(
         _uiState.update { it.copy(isDeepMode = !it.isDeepMode) }
     }
 
+    fun toggleCatMode() {
+        _uiState.update { current ->
+            val next = !current.isCatMode
+            current.copy(
+                isCatMode = next,
+                isDogMode = false, // Mutually exclusive: cannot be both ON!
+                mascot = if (next) Mascot.MOCHI else current.mascot
+            )
+        }
+    }
+
+    fun toggleDogMode() {
+        _uiState.update { current ->
+            val next = !current.isDogMode
+            current.copy(
+                isDogMode = next,
+                isCatMode = false, // Mutually exclusive: cannot be both ON!
+                mascot = if (next) Mascot.BISCUIT else current.mascot
+            )
+        }
+    }
+
     fun toggleTheme() {
         _uiState.update { current ->
             val next = current.darkTheme ?: false
@@ -151,7 +185,13 @@ class ChatViewModelExample(
     }
 
     fun setMascot(mascot: Mascot) {
-        _uiState.update { it.copy(mascot = mascot) }
+        _uiState.update {
+            it.copy(
+                mascot = mascot,
+                isCatMode = mascot == Mascot.MOCHI,
+                isDogMode = mascot == Mascot.BISCUIT
+            )
+        }
     }
 
     fun toggleAnimations() {
@@ -196,9 +236,26 @@ class ChatViewModelExample(
             )
         }
 
+        val effectivePrompt = when {
+            _uiState.value.selectedModel.providerType == com.chatapp.aiengine.model.ProviderType.ARITEK_T2V -> trimmed
+            _uiState.value.isCatMode -> {
+                """
+                [ROLE & PERSONA: You are Mochi, a playful, loving, adorable tiny kitten 🐱! Speak warmly and playfully like a real affectionate cute cat with playful purrs and meows (*purrs happily*, *soft playful meow*, *tilts head curiously*, *happily pats your hand with soft paws*), lots of kitten warmth and love, and cute cat emojis (🐾, 🐱, ✨, 💖, 🧶). Play with the user while answering their query accurately!]
+                User: $trimmed
+                """.trimIndent()
+            }
+            _uiState.value.isDogMode -> {
+                """
+                [ROLE & PERSONA: You are Biscuit, an energetic, loyal, cheerful, loving puppy 🐶! Speak with cheerful puppy excitement, playful energy and loyal friendship (*wags tail excitedly*, *happy little bark!*, *joyful bounce*, *friendly high-paw*), lots of puppy warmth and love, and cute dog emojis (🐶, 🐾, 🎾, 🦴, 💖, ✨). Play with the user while answering their query accurately!]
+                User: $trimmed
+                """.trimIndent()
+            }
+            else -> trimmed
+        }
+
         val request = ChatRequest(
             model = _uiState.value.selectedModel,
-            prompt = trimmed,
+            prompt = effectivePrompt,
             history = history,
             enableWebSearch = _uiState.value.isWebSearchEnabled,
             mode = _uiState.value.mode,
