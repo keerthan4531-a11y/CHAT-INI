@@ -21,6 +21,7 @@ import com.chatapp.aiengine.model.UsageSnapshot
 import com.chatapp.aiengine.model.WebCitation
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -282,6 +283,52 @@ class ChatViewModelExample(
             val tools = mutableListOf<ToolCall>()
             var plan: AgentPlan? = null
 
+            var lastContentUpdate = 0L
+            var lastThinkingUpdate = 0L
+            val throttleIntervalMs = 50L
+            var pendingFlushJob: Job? = null
+
+            fun flushLiveContent(force: Boolean = false) {
+                val now = System.currentTimeMillis()
+                if (force || now - lastContentUpdate >= throttleIntervalMs) {
+                    lastContentUpdate = now
+                    pendingFlushJob?.cancel()
+                    val str = content.toString()
+                    _uiState.update {
+                        it.copy(
+                            isThinking = false,
+                            liveContentText = str
+                        )
+                    }
+                } else if (pendingFlushJob == null || pendingFlushJob?.isCompleted == true) {
+                    pendingFlushJob = launch {
+                        delay(throttleIntervalMs)
+                        lastContentUpdate = System.currentTimeMillis()
+                        val str = content.toString()
+                        _uiState.update {
+                            it.copy(
+                                isThinking = false,
+                                liveContentText = str
+                            )
+                        }
+                    }
+                }
+            }
+
+            fun flushLiveThinking(force: Boolean = false) {
+                val now = System.currentTimeMillis()
+                if (force || now - lastThinkingUpdate >= throttleIntervalMs) {
+                    lastThinkingUpdate = now
+                    val str = thinking.toString()
+                    _uiState.update {
+                        it.copy(
+                            isThinking = true,
+                            liveThinkingText = str
+                        )
+                    }
+                }
+            }
+
             val stream = if (request.mode == AgentMode.AGENT) {
                 engine.streamAgent(request)
             } else {
@@ -347,15 +394,11 @@ class ChatViewModelExample(
 
                         is StreamEvent.ThinkingDelta -> {
                             thinking.append(event.text)
-                            _uiState.update {
-                                it.copy(
-                                    isThinking = true,
-                                    liveThinkingText = thinking.toString()
-                                )
-                            }
+                            flushLiveThinking(force = false)
                         }
 
                         is StreamEvent.ThinkingCompleted -> {
+                            flushLiveThinking(force = true)
                             _uiState.update { it.copy(isThinking = false) }
                         }
 
@@ -376,12 +419,7 @@ class ChatViewModelExample(
 
                         is StreamEvent.ContentDelta -> {
                             content.append(event.text)
-                            _uiState.update {
-                                it.copy(
-                                    isThinking = false,
-                                    liveContentText = content.toString()
-                                )
-                            }
+                            flushLiveContent(force = false)
                         }
 
                         is StreamEvent.CitationAdded -> {
@@ -396,6 +434,7 @@ class ChatViewModelExample(
                         }
 
                         is StreamEvent.AgentCompleted -> {
+                            pendingFlushJob?.cancel()
                             commitAssistant(event.finalMessage)
                             _uiState.update {
                                 it.copy(
@@ -414,6 +453,7 @@ class ChatViewModelExample(
                         }
 
                         is StreamEvent.Completed -> {
+                            pendingFlushJob?.cancel()
                             commitAssistant(event.finalMessage)
                             _uiState.update {
                                 it.copy(
@@ -429,6 +469,7 @@ class ChatViewModelExample(
                         }
 
                         is StreamEvent.Error -> {
+                            pendingFlushJob?.cancel()
                             val partial = content.toString()
                             if (partial.isNotBlank()) {
                                 commitAssistant(

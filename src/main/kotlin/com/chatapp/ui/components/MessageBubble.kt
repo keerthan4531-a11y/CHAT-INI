@@ -55,6 +55,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private val VIDEO_URL_REGEX = Regex("https?://[^\\s\"')]+\\.mp4")
+
 /**
  * A chat turn. User messages are chunky pastel bubbles; assistant messages are
  * paper with a mascot avatar, live plan, tool cards, sources and a typewriter
@@ -197,7 +199,9 @@ fun MessageBubble(
                         modifier = Modifier.padding(top = 6.dp)
                     )
                     val videoUrlMatch = remember(content) {
-                        Regex("https?://[^\\s\"')]+\\.mp4").find(content)?.value
+                        if (content.contains(".mp4")) {
+                            VIDEO_URL_REGEX.find(content)?.value
+                        } else null
                     }
                     if (videoUrlMatch != null) {
                         Spacer(Modifier.height(8.dp))
@@ -495,7 +499,35 @@ private fun CodeBlock(language: String, code: String) {
     }
 }
 
+private fun isUnorderedList(line: String): Boolean {
+    val trimmed = line.trimStart()
+    return trimmed.startsWith("- ") || trimmed.startsWith("* ")
+}
+
+private fun isOrderedList(line: String): Boolean {
+    val trimmed = line.trimStart()
+    val dotIndex = trimmed.indexOf(". ")
+    if (dotIndex in 1..4) {
+        return trimmed.substring(0, dotIndex).all { it.isDigit() }
+    }
+    return false
+}
+
+private fun stripUnorderedPrefix(line: String): String {
+    val trimmed = line.trimStart()
+    return if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) trimmed.substring(2) else line
+}
+
+private fun stripOrderedPrefix(line: String): String {
+    val trimmed = line.trimStart()
+    val dotIndex = trimmed.indexOf(". ")
+    return if (dotIndex in 1..4 && trimmed.substring(0, dotIndex).all { it.isDigit() }) {
+        trimmed.substring(dotIndex + 2)
+    } else line
+}
+
 private fun parseBlocks(text: String): List<Block> {
+    if (text.isEmpty()) return emptyList()
     val lines = text.replace("\r\n", "\n").split("\n")
     val blocks = mutableListOf<Block>()
     var index = 0
@@ -524,6 +556,11 @@ private fun parseBlocks(text: String): List<Block> {
                 index += 1
             }
 
+            line.startsWith("### ") -> {
+                blocks.add(Block.Heading(line.removePrefix("### ").trim()))
+                index += 1
+            }
+
             line.startsWith("> ") -> {
                 val quote = mutableListOf<String>()
                 while (index < lines.size && lines[index].startsWith("> ")) {
@@ -533,19 +570,19 @@ private fun parseBlocks(text: String): List<Block> {
                 blocks.add(Block.Quote(quote.joinToString(" ")))
             }
 
-            line.matches(Regex("^\\s*[-*]\\s+.*")) -> {
+            isUnorderedList(line) -> {
                 val items = mutableListOf<String>()
-                while (index < lines.size && lines[index].matches(Regex("^\\s*[-*]\\s+.*"))) {
-                    items.add(lines[index].replace(Regex("^\\s*[-*]\\s+"), ""))
+                while (index < lines.size && isUnorderedList(lines[index])) {
+                    items.add(stripUnorderedPrefix(lines[index]))
                     index += 1
                 }
                 blocks.add(Block.ListBlock(items, ordered = false))
             }
 
-            line.matches(Regex("^\\s*\\d+\\.\\s+.*")) -> {
+            isOrderedList(line) -> {
                 val items = mutableListOf<String>()
-                while (index < lines.size && lines[index].matches(Regex("^\\s*\\d+\\.\\s+.*"))) {
-                    items.add(lines[index].replace(Regex("^\\s*\\d+\\.\\s+"), ""))
+                while (index < lines.size && isOrderedList(lines[index])) {
+                    items.add(stripOrderedPrefix(lines[index]))
                     index += 1
                 }
                 blocks.add(Block.ListBlock(items, ordered = true))
@@ -560,8 +597,8 @@ private fun parseBlocks(text: String): List<Block> {
                     !lines[index].startsWith("```") &&
                     !lines[index].startsWith("#") &&
                     !lines[index].startsWith("> ") &&
-                    !lines[index].matches(Regex("^\\s*[-*]\\s+.*")) &&
-                    !lines[index].matches(Regex("^\\s*\\d+\\.\\s+.*"))
+                    !isUnorderedList(lines[index]) &&
+                    !isOrderedList(lines[index])
                 ) {
                     paragraph.add(lines[index])
                     index += 1
@@ -573,8 +610,11 @@ private fun parseBlocks(text: String): List<Block> {
     return blocks
 }
 
-private fun inlineMarkdown(text: String, colors: com.chatapp.ui.theme.PawPalColors): AnnotatedString =
-    buildAnnotatedString {
+private fun inlineMarkdown(text: String, colors: com.chatapp.ui.theme.PawPalColors): AnnotatedString {
+    if (!text.contains('*') && !text.contains('`') && !text.contains('[')) {
+        return AnnotatedString(text)
+    }
+    return buildAnnotatedString {
         var i = 0
         while (i < text.length) {
             when {
@@ -634,12 +674,25 @@ private fun inlineMarkdown(text: String, colors: com.chatapp.ui.theme.PawPalColo
                 }
 
                 else -> {
-                    append(text[i])
-                    i += 1
+                    val nextStar = text.indexOf('*', i).let { if (it == -1) Int.MAX_VALUE else it }
+                    val nextBacktick = text.indexOf('`', i).let { if (it == -1) Int.MAX_VALUE else it }
+                    val nextBracket = text.indexOf('[', i).let { if (it == -1) Int.MAX_VALUE else it }
+                    val next = minOf(nextStar, minOf(nextBacktick, nextBracket))
+                    if (next == Int.MAX_VALUE) {
+                        append(text.substring(i))
+                        break
+                    } else if (next > i) {
+                        append(text.substring(i, next))
+                        i = next
+                    } else {
+                        append(text[i])
+                        i += 1
+                    }
                 }
             }
         }
     }
+}
 
 private fun formatTime(timestamp: Long): String =
     runCatching {

@@ -89,6 +89,8 @@ import com.chatapp.ui.components.WobblyCard
 import com.chatapp.ui.theme.HandSmallStyle
 import com.chatapp.ui.theme.LocalPawPalColors
 import com.chatapp.ui.theme.PawPalTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -119,10 +121,25 @@ private fun ChatScreenContent(
     var inputText by remember { mutableStateOf("") }
     val width = LocalConfiguration.current.screenWidthDp
 
-    LaunchedEffect(uiState.messages.size, uiState.liveContentText, uiState.isGenerating) {
+    LaunchedEffect(uiState.messages.size) {
         val total = listState.layoutInfo.totalItemsCount
-        if ((uiState.messages.isNotEmpty() || uiState.isGenerating) && total > 0) {
+        if (total > 0) {
             listState.scrollToItem(total - 1)
+        }
+    }
+
+    LaunchedEffect(uiState.isGenerating) {
+        if (uiState.isGenerating) {
+            while (isActive) {
+                val total = listState.layoutInfo.totalItemsCount
+                if (total > 0) {
+                    val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                    if (lastVisible >= total - 2) {
+                        listState.scrollToItem(total - 1)
+                    }
+                }
+                delay(120)
+            }
         }
     }
 
