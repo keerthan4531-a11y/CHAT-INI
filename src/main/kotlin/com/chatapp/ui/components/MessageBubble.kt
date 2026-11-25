@@ -8,9 +8,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +59,7 @@ import java.util.Date
 import java.util.Locale
 
 private val VIDEO_URL_REGEX = Regex("https?://[^\\s\"')]+\\.mp4")
+private val BAR_ENTRY_REGEX = Regex("""^(.+?)\s*[:\-–]\s*(\d+(?:\.\d+)?%?)$""")
 
 /**
  * A chat turn. User messages are chunky pastel bubbles; assistant messages are
@@ -376,6 +380,10 @@ private sealed interface Block {
     data class Code(val language: String, val code: String) : Block
     data class ListBlock(val items: List<String>, val ordered: Boolean) : Block
     data class Quote(val text: String) : Block
+    data class Table(val headers: List<String>, val rows: List<List<String>>) : Block
+    data class Diagram(val rawCode: String) : Block
+    data class RouteMap(val stops: List<RouteStop>, val title: String? = null) : Block
+    data class BarChart(val entries: List<BarEntry>, val title: String? = null) : Block
 }
 
 @Composable
@@ -448,6 +456,132 @@ fun MarkdownText(
                         )
                     }
                     Spacer(Modifier.height(4.dp))
+                }
+
+                is Block.Table -> {
+                    DoodleTable(headers = block.headers, rows = block.rows)
+                    Spacer(Modifier.height(6.dp))
+                }
+
+                is Block.Diagram -> {
+                    DoodleDiagram(rawCode = block.rawCode)
+                    Spacer(Modifier.height(6.dp))
+                }
+
+                is Block.RouteMap -> {
+                    DoodleRouteMap(stops = block.stops, title = block.title)
+                    Spacer(Modifier.height(6.dp))
+                }
+
+                is Block.BarChart -> {
+                    DoodleBarChart(entries = block.entries, title = block.title)
+                    Spacer(Modifier.height(6.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DoodleTable(
+    headers: List<String>,
+    rows: List<List<String>>
+) {
+    val colors = LocalPawPalColors.current
+    if (headers.isEmpty()) return
+
+    val colWidths = remember(headers, rows) {
+        headers.indices.map { col ->
+            val maxLen = maxOf(
+                headers[col].length,
+                rows.maxOfOrNull { it.getOrNull(col)?.length ?: 0 } ?: 0
+            )
+            (maxLen * 8.2f + 22f).coerceIn(76f, 185f).dp
+        }
+    }
+
+    WobblyCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        seed = headers.hashCode(),
+        fill = colors.card,
+        borderColor = colors.line,
+        borderWidth = 1.5.dp,
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+        ) {
+            // Header row
+            Row(
+                modifier = Modifier
+                    .height(IntrinsicSize.Min)
+                    .background(colors.butterSoft)
+            ) {
+                headers.forEachIndexed { colIndex, header ->
+                    Text(
+                        text = inlineMarkdown(header, colors),
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = colors.ink,
+                        modifier = Modifier
+                            .width(colWidths[colIndex])
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    )
+                    if (colIndex < headers.lastIndex) {
+                        Box(
+                            Modifier
+                                .width(1.dp)
+                                .fillMaxHeight()
+                                .background(colors.line.copy(alpha = 0.45f))
+                        )
+                    }
+                }
+            }
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(1.5.dp)
+                    .background(colors.line)
+            )
+
+            // Data rows
+            rows.forEachIndexed { rowIndex, row ->
+                val rowBg = if (rowIndex % 2 == 0) colors.card else colors.cardAlt.copy(alpha = 0.55f)
+                Row(
+                    modifier = Modifier
+                        .height(IntrinsicSize.Min)
+                        .background(rowBg)
+                ) {
+                    headers.indices.forEach { colIndex ->
+                        val cell = row.getOrNull(colIndex).orEmpty()
+                        Text(
+                            text = inlineMarkdown(cell, colors),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.ink,
+                            modifier = Modifier
+                                .width(colWidths[colIndex])
+                                .padding(horizontal = 10.dp, vertical = 7.dp)
+                        )
+                        if (colIndex < headers.lastIndex) {
+                            Box(
+                                Modifier
+                                    .width(1.dp)
+                                    .fillMaxHeight()
+                                    .background(colors.lineSoft)
+                            )
+                        }
+                    }
+                }
+                if (rowIndex < rows.lastIndex) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(colors.lineSoft)
+                    )
                 }
             }
         }
@@ -526,6 +660,72 @@ private fun stripOrderedPrefix(line: String): String {
     } else line
 }
 
+private fun isTableRow(line: String): Boolean = line.contains('|')
+
+private fun isTableSeparator(line: String): Boolean {
+    val trimmed = line.trim()
+    if (!trimmed.contains('-')) return false
+    return trimmed.all { it == '|' || it == '-' || it == ':' || it.isWhitespace() } &&
+        trimmed.count { it == '-' } >= 2
+}
+
+private fun splitTableCells(line: String): List<String> {
+    var trimmed = line.trim()
+    if (trimmed.startsWith("|")) trimmed = trimmed.substring(1)
+    if (trimmed.endsWith("|") && trimmed.isNotEmpty()) trimmed = trimmed.substring(0, trimmed.length - 1)
+    return trimmed.split('|').map { it.trim() }
+}
+
+private fun tryParseBarChart(items: List<String>): List<BarEntry>? {
+    if (items.size < 2) return null
+    val parsed = items.mapNotNull { raw ->
+        val clean = raw.replace("**", "").trim()
+        val match = BAR_ENTRY_REGEX.matchEntire(clean) ?: return@mapNotNull null
+        val label = match.groupValues[1].trim()
+        val rawVal = match.groupValues[2].trim()
+        val num = rawVal.removeSuffix("%").toFloatOrNull() ?: return@mapNotNull null
+        BarEntry(label = label, value = num, displayValue = rawVal)
+    }
+    return if (parsed.size == items.size) parsed else null
+}
+
+private fun tryParseRouteStops(items: List<String>): List<RouteStop>? {
+    if (items.size < 2) return null
+    val looksLikeRoute = items.count { item ->
+        val t = item.trimStart()
+        t.startsWith("📍") ||
+            t.startsWith("🗺️") ||
+            t.startsWith("🏁") ||
+            t.startsWith("Day ", ignoreCase = true) ||
+            t.startsWith("Stop ", ignoreCase = true)
+    } >= 2
+    if (!looksLikeRoute) return null
+    return items.map { raw ->
+        val clean = raw.removePrefix("📍").removePrefix("🗺️").removePrefix("🏁").trim()
+        val colonIdx = clean.indexOf(':')
+        if (colonIdx in 1..28) {
+            RouteStop(
+                title = clean.substring(0, colonIdx).replace("**", "").trim(),
+                detail = clean.substring(colonIdx + 1).replace("**", "").trim()
+            )
+        } else {
+            RouteStop(title = clean.replace("**", "").trim())
+        }
+    }
+}
+
+private fun tryParseArrowRouteLine(line: String): List<RouteStop>? {
+    val sep = when {
+        line.contains("→") -> "→"
+        line.contains("->") -> "->"
+        else -> return null
+    }
+    val parts = line.split(sep).map { it.replace("**", "").trim() }.filter { it.isNotBlank() }
+    return if (parts.size >= 3 && parts.all { it.length <= 45 }) {
+        parts.map { RouteStop(title = it) }
+    } else null
+}
+
 private fun parseBlocks(text: String): List<Block> {
     if (text.isEmpty()) return emptyList()
     val lines = text.replace("\r\n", "\n").split("\n")
@@ -543,7 +743,50 @@ private fun parseBlocks(text: String): List<Block> {
                     index += 1
                 }
                 index += 1
-                blocks.add(Block.Code(language, code.joinToString("\n")))
+                val rawBlock = code.joinToString("\n")
+                when {
+                    language.equals("mermaid", ignoreCase = true) -> {
+                        blocks.add(Block.Diagram(rawBlock))
+                    }
+                    language.equals("chart", ignoreCase = true) || language.equals("bar", ignoreCase = true) -> {
+                        val chartLines = code.filter { it.isNotBlank() }
+                        val entries = tryParseBarChart(chartLines)
+                        if (entries != null) blocks.add(Block.BarChart(entries))
+                        else blocks.add(Block.Code(language, rawBlock))
+                    }
+                    language.equals("route", ignoreCase = true) ||
+                        language.equals("map", ignoreCase = true) ||
+                        language.equals("itinerary", ignoreCase = true) -> {
+                        val stops = code.filter { it.isNotBlank() }.map { raw ->
+                            val clean = raw.trim().removePrefix("- ").removePrefix("* ").trim()
+                            val colonIdx = clean.indexOf(':')
+                            if (colonIdx in 1..28) {
+                                RouteStop(clean.substring(0, colonIdx).trim(), clean.substring(colonIdx + 1).trim())
+                            } else RouteStop(clean)
+                        }
+                        if (stops.isNotEmpty()) blocks.add(Block.RouteMap(stops))
+                        else blocks.add(Block.Code(language, rawBlock))
+                    }
+                    else -> blocks.add(Block.Code(language, rawBlock))
+                }
+            }
+
+            isTableRow(line) && index + 1 < lines.size && isTableSeparator(lines[index + 1]) -> {
+                val headers = splitTableCells(line)
+                index += 2
+                val rows = mutableListOf<List<String>>()
+                while (index < lines.size && lines[index].isNotBlank() && isTableRow(lines[index])) {
+                    val rawCells = splitTableCells(lines[index])
+                    val normalized = List(headers.size) { col -> rawCells.getOrElse(col) { "" } }
+                    rows.add(normalized)
+                    index += 1
+                }
+                blocks.add(Block.Table(headers, rows))
+            }
+
+            tryParseArrowRouteLine(line) != null -> {
+                blocks.add(Block.RouteMap(tryParseArrowRouteLine(line)!!))
+                index += 1
             }
 
             line.startsWith("# ") -> {
@@ -576,7 +819,13 @@ private fun parseBlocks(text: String): List<Block> {
                     items.add(stripUnorderedPrefix(lines[index]))
                     index += 1
                 }
-                blocks.add(Block.ListBlock(items, ordered = false))
+                val barEntries = tryParseBarChart(items)
+                val routeStops = if (barEntries == null) tryParseRouteStops(items) else null
+                when {
+                    barEntries != null -> blocks.add(Block.BarChart(barEntries))
+                    routeStops != null -> blocks.add(Block.RouteMap(routeStops))
+                    else -> blocks.add(Block.ListBlock(items, ordered = false))
+                }
             }
 
             isOrderedList(line) -> {
@@ -585,7 +834,13 @@ private fun parseBlocks(text: String): List<Block> {
                     items.add(stripOrderedPrefix(lines[index]))
                     index += 1
                 }
-                blocks.add(Block.ListBlock(items, ordered = true))
+                val barEntries = tryParseBarChart(items)
+                val routeStops = if (barEntries == null) tryParseRouteStops(items) else null
+                when {
+                    barEntries != null -> blocks.add(Block.BarChart(barEntries))
+                    routeStops != null -> blocks.add(Block.RouteMap(routeStops))
+                    else -> blocks.add(Block.ListBlock(items, ordered = true))
+                }
             }
 
             line.isBlank() -> index += 1
@@ -598,7 +853,9 @@ private fun parseBlocks(text: String): List<Block> {
                     !lines[index].startsWith("#") &&
                     !lines[index].startsWith("> ") &&
                     !isUnorderedList(lines[index]) &&
-                    !isOrderedList(lines[index])
+                    !isOrderedList(lines[index]) &&
+                    !(isTableRow(lines[index]) && index + 1 < lines.size && isTableSeparator(lines[index + 1])) &&
+                    tryParseArrowRouteLine(lines[index]) == null
                 ) {
                     paragraph.add(lines[index])
                     index += 1
