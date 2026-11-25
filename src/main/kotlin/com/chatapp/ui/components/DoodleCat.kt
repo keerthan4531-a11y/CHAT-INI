@@ -1,28 +1,40 @@
 package com.chatapp.ui.components
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.runtime.State
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -694,7 +706,7 @@ fun DoodleDog(
     }
 }
 
-/** Small round mascot avatar for message rows and the drawer header. */
+/** Small round mascot avatar for message rows and the drawer header. Tap to pet! */
 @Composable
 fun MascotAvatar(
     kind: MascotKind,
@@ -704,7 +716,38 @@ fun MascotAvatar(
 ) {
     val colors = LocalPawPalColors.current
     val shape = remember { WobblyShape(11, size / 2.2f) }
-    Box(modifier = modifier.size(size)) {
+    var petTrigger by remember { mutableIntStateOf(0) }
+    val bounce = remember { Animatable(1f) }
+    val heartAnim = remember { Animatable(1f) }
+
+    LaunchedEffect(petTrigger) {
+        if (petTrigger > 0) {
+            bounce.snapTo(0.84f)
+            bounce.animateTo(
+                1f,
+                spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+            )
+        }
+    }
+    LaunchedEffect(petTrigger) {
+        if (petTrigger > 0) {
+            heartAnim.snapTo(0f)
+            heartAnim.animateTo(1f, tween(900, easing = FastOutSlowInEasing))
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .size(size)
+            .graphicsLayer {
+                scaleX = bounce.value
+                scaleY = bounce.value
+            }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { petTrigger += 1 }
+    ) {
         Box(
             Modifier
                 .matchParentSize()
@@ -728,6 +771,16 @@ fun MascotAvatar(
                     DoodleDog(size = size, animate = false)
                 }
             }
+        }
+        if (petTrigger > 0 && heartAnim.value < 0.99f) {
+            Text(
+                text = "💖",
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 4.dp, y = (-6 - heartAnim.value * 18).dp)
+                    .alpha((1f - heartAnim.value).coerceIn(0f, 1f))
+            )
         }
     }
 }

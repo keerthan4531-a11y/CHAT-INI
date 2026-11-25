@@ -67,6 +67,7 @@ import com.chatapp.ui.components.ApprovalCard
 import com.chatapp.ui.components.ChatInputBar
 import com.chatapp.ui.components.CatMood
 import com.chatapp.ui.components.Chip
+import com.chatapp.ui.components.CourierPetBanner
 import com.chatapp.ui.components.DoodleArrow
 import com.chatapp.ui.components.DoodleButton
 import com.chatapp.ui.components.DoodleCat
@@ -78,6 +79,8 @@ import com.chatapp.ui.components.McpSheet
 import com.chatapp.ui.components.MessageBubble
 import com.chatapp.ui.components.Meter
 import com.chatapp.ui.components.ModelPickerSheet
+import com.chatapp.ui.components.PettableHeroMascot
+import com.chatapp.ui.components.rememberTiltParallax
 import com.chatapp.ui.components.ProxyPoolSheet
 import com.chatapp.ui.components.SettingsSheet
 import com.chatapp.ui.components.SquiggleDivider
@@ -119,7 +122,18 @@ private fun ChatScreenContent(
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     var inputText by remember { mutableStateOf("") }
+    var isSleeping by remember { mutableStateOf(false) }
+    var activityTick by remember { mutableStateOf(0) }
     val width = LocalConfiguration.current.screenWidthDp
+    val (tiltX, tiltY) = if (uiState.showAnimations) rememberTiltParallax() else (0f to 0f)
+
+    LaunchedEffect(activityTick, uiState.isGenerating) {
+        isSleeping = false
+        if (!uiState.isGenerating) {
+            delay(25_000)
+            isSleeping = true
+        }
+    }
 
     LaunchedEffect(uiState.messages.size) {
         val total = listState.layoutInfo.totalItemsCount
@@ -202,15 +216,27 @@ private fun ChatScreenContent(
                             modifier = Modifier.padding(bottom = 7.dp)
                         )
                     }
+                    if (uiState.showAnimations) {
+                        CourierPetBanner(
+                            isGenerating = uiState.isGenerating,
+                            hasContentStarted = uiState.liveContentText.isNotEmpty(),
+                            isSearching = uiState.isWebSearching,
+                            mascot = if (uiState.mascot == Mascot.MOCHI) MascotKind.CAT else MascotKind.DOG,
+                            assistantName = uiState.assistantName
+                        )
+                    }
                     if (uiState.messages.isEmpty()) {
                         DoodleArrow(
-                            text = "ask me anything!",
+                            text = if (isSleeping) "zzz… tap me!" else "ask me anything!",
                             modifier = Modifier.padding(start = 12.dp, bottom = 1.dp)
                         )
                     }
                     ChatInputBar(
                         inputText = inputText,
-                        onInputChange = { inputText = it },
+                        onInputChange = {
+                            inputText = it
+                            activityTick += 1
+                        },
                         isGenerating = uiState.isGenerating,
                         isWebSearchEnabled = uiState.isWebSearchEnabled,
                         isAgentMode = uiState.mode == AgentMode.AGENT,
@@ -252,7 +278,12 @@ private fun ChatScreenContent(
                 if (uiState.messages.isEmpty() && !uiState.isGenerating) {
                     EmptyState(
                         uiState = uiState,
+                        tiltX = tiltX,
+                        tiltY = tiltY,
+                        isUserTyping = inputText.isNotBlank(),
+                        isSleeping = isSleeping,
                         onPrompt = { prompt ->
+                            activityTick += 1
                             viewModel.setMode(AgentMode.AGENT)
                             viewModel.sendMessage(prompt)
                         }
@@ -760,6 +791,10 @@ private fun NavItem(
 @Composable
 private fun EmptyState(
     uiState: com.chatapp.aiengine.example.ChatUiState,
+    tiltX: Float = 0f,
+    tiltY: Float = 0f,
+    isUserTyping: Boolean = false,
+    isSleeping: Boolean = false,
     onPrompt: (String) -> Unit
 ) {
     val colors = LocalPawPalColors.current
@@ -776,16 +811,20 @@ private fun EmptyState(
                 .padding(top = if (compact) 8.dp else 18.dp, bottom = 104.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier.size(if (compact) 150.dp else 196.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                DoodleCat(
-                    mood = if (uiState.isGenerating) CatMood.THINKING else CatMood.IDLE,
-                    size = if (compact) 150.dp else 196.dp,
-                    animate = uiState.showAnimations
-                )
+            val heroMood = when {
+                uiState.isGenerating -> CatMood.THINKING
+                isSleeping -> CatMood.SLEEPING
+                else -> CatMood.IDLE
             }
+            PettableHeroMascot(
+                kind = if (uiState.mascot == Mascot.MOCHI) MascotKind.CAT else MascotKind.DOG,
+                mood = heroMood,
+                size = if (compact) 150.dp else 196.dp,
+                tiltX = tiltX,
+                tiltY = tiltY,
+                isUserTyping = isUserTyping,
+                animate = uiState.showAnimations
+            )
             Text(
                 text = "Hi, I'm ${uiState.assistantName}!",
                 style = MaterialTheme.typography.displayMedium,

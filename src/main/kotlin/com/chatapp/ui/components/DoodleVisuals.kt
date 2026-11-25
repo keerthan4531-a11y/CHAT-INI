@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -537,99 +538,111 @@ fun DoodleChecklist(
     val checkedStates = remember(items) {
         mutableStateListOf(*items.map { it.initialChecked }.toTypedArray())
     }
+    var confettiTrigger by remember { mutableIntStateOf(0) }
     val doneCount = checkedStates.count { it }
     val allDone = doneCount == items.size
 
-    WobblyCard(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        seed = items.hashCode(),
-        fill = colors.card,
-        borderColor = colors.line,
-        borderWidth = 1.5.dp,
-        contentPadding = PaddingValues(12.dp)
+            .padding(vertical = 4.dp)
     ) {
-        Row(
+        WobblyCard(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            seed = items.hashCode(),
+            fill = colors.card,
+            borderColor = colors.line,
+            borderWidth = 1.5.dp,
+            contentPadding = PaddingValues(12.dp)
         ) {
-            Text(text = if (allDone) "🎉" else "✅", fontSize = 15.sp)
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = "doodle checklist",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = colors.ink
-            )
-            Spacer(Modifier.weight(1f))
-            Chip(
-                text = "$doneCount/${items.size} done",
-                background = if (allDone) colors.mintSoft else colors.butterSoft,
-                color = colors.ink
-            )
-        }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = if (allDone) "🎉" else "✅", fontSize = 15.sp)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "doodle checklist",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = colors.ink
+                )
+                Spacer(Modifier.weight(1f))
+                Chip(
+                    text = "$doneCount/${items.size} done",
+                    background = if (allDone) colors.mintSoft else colors.butterSoft,
+                    color = colors.ink
+                )
+            }
 
-        Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
 
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            items.forEachIndexed { index, item ->
-                val isChecked = checkedStates.getOrElse(index) { item.initialChecked }
-                val boxShape = remember(index) { WobblyShape(seed = 80 + index, radius = 6.dp) }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                items.forEachIndexed { index, item ->
+                    val isChecked = checkedStates.getOrElse(index) { item.initialChecked }
+                    val boxShape = remember(index) { WobblyShape(seed = 80 + index, radius = 6.dp) }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable {
-                            if (index < checkedStates.size) {
-                                checkedStates[index] = !checkedStates[index]
-                            }
-                        }
-                        .padding(horizontal = 4.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .size(22.dp)
-                            .clip(boxShape)
-                            .background(if (isChecked) colors.mint else colors.paperDeep)
-                            .border(1.5.dp, colors.line, boxShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isChecked) {
-                            val checkColor = colors.ink
-                            Canvas(modifier = Modifier.size(12.dp)) {
-                                val path = Path().apply {
-                                    moveTo(size.width * 0.15f, size.height * 0.52f)
-                                    lineTo(size.width * 0.42f, size.height * 0.80f)
-                                    lineTo(size.width * 0.88f, size.height * 0.22f)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                if (index < checkedStates.size) {
+                                    checkedStates[index] = !checkedStates[index]
+                                    if (checkedStates.all { it }) {
+                                        confettiTrigger += 1
+                                    }
                                 }
-                                drawPath(
-                                    path = path,
-                                    color = checkColor,
-                                    style = Stroke(
-                                        width = 3.2f,
-                                        cap = StrokeCap.Round,
-                                        join = StrokeJoin.Round
+                            }
+                            .padding(horizontal = 4.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(boxShape)
+                                .background(if (isChecked) colors.mint else colors.paperDeep)
+                                .border(1.5.dp, colors.line, boxShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isChecked) {
+                                val checkColor = colors.ink
+                                Canvas(modifier = Modifier.size(12.dp)) {
+                                    val path = Path().apply {
+                                        moveTo(size.width * 0.15f, size.height * 0.52f)
+                                        lineTo(size.width * 0.42f, size.height * 0.80f)
+                                        lineTo(size.width * 0.88f, size.height * 0.22f)
+                                    }
+                                    drawPath(
+                                        path = path,
+                                        color = checkColor,
+                                        style = Stroke(
+                                            width = 3.2f,
+                                            cap = StrokeCap.Round,
+                                            join = StrokeJoin.Round
+                                        )
                                     )
-                                )
+                                }
                             }
                         }
+
+                        Spacer(Modifier.width(9.dp))
+
+                        RichInlineText(
+                            text = item.text,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDecoration = if (isChecked) TextDecoration.LineThrough else TextDecoration.None
+                            ),
+                            color = if (isChecked) colors.inkMute else colors.ink,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
-
-                    Spacer(Modifier.width(9.dp))
-
-                    RichInlineText(
-                        text = item.text,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            textDecoration = if (isChecked) TextDecoration.LineThrough else TextDecoration.None
-                        ),
-                        color = if (isChecked) colors.inkMute else colors.ink,
-                        modifier = Modifier.weight(1f)
-                    )
                 }
             }
         }
+        DoodleConfettiOverlay(
+            triggerCount = confettiTrigger,
+            modifier = Modifier.matchParentSize()
+        )
     }
 }
 

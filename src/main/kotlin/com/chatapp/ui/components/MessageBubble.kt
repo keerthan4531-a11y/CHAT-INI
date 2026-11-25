@@ -314,26 +314,10 @@ fun TypingDots(
     }
 }
 
-/** Pulsing cursor shown while streaming tokens ChatGPT-style. */
+/** Walking paw-print cursor shown while streaming tokens. */
 @Composable
 fun StreamingCursor(modifier: Modifier = Modifier) {
-    val colors = LocalPawPalColors.current
-    val transition = rememberInfiniteTransition(label = "streamingCursor")
-    val alpha by transition.animateFloat(
-        initialValue = 0.2f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(450),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "cursorAlpha"
-    )
-    Box(
-        modifier = modifier
-            .size(width = 8.dp, height = 15.dp)
-            .clip(RoundedCornerShape(2.dp))
-            .background(colors.coral.copy(alpha = alpha))
-    )
+    WalkingPawCursor(modifier = modifier)
 }
 
 /** Tappable video card shown when an MP4 video URL is present in the response. */
