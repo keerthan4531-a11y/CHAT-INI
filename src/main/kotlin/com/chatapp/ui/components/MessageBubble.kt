@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +27,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,11 +38,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -384,6 +391,7 @@ private sealed interface Block {
     data class Diagram(val rawCode: String) : Block
     data class RouteMap(val stops: List<RouteStop>, val title: String? = null) : Block
     data class BarChart(val entries: List<BarEntry>, val title: String? = null) : Block
+    data class Checklist(val items: List<ChecklistItem>) : Block
 }
 
 @Composable
@@ -397,8 +405,8 @@ fun MarkdownText(
         blocks.forEach { block ->
             when (block) {
                 is Block.Paragraph -> {
-                    Text(
-                        text = inlineMarkdown(block.text, colors),
+                    RichInlineText(
+                        text = block.text,
                         style = MaterialTheme.typography.bodyMedium,
                         color = colors.ink
                     )
@@ -427,8 +435,8 @@ fun MarkdownText(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = inlineMarkdown(item, colors),
+                                RichInlineText(
+                                    text = item,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = colors.ink,
                                     modifier = Modifier.weight(1f)
@@ -449,8 +457,8 @@ fun MarkdownText(
                     ) {
                         Box(Modifier.width(3.dp).fillMaxHeight().background(colors.coral))
                         Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = inlineMarkdown(block.text, colors),
+                        RichInlineText(
+                            text = block.text,
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.inkSoft
                         )
@@ -475,6 +483,11 @@ fun MarkdownText(
 
                 is Block.BarChart -> {
                     DoodleBarChart(entries = block.entries, title = block.title)
+                    Spacer(Modifier.height(6.dp))
+                }
+
+                is Block.Checklist -> {
+                    DoodleChecklist(items = block.items)
                     Spacer(Modifier.height(6.dp))
                 }
             }
@@ -522,8 +535,8 @@ private fun DoodleTable(
                     .background(colors.butterSoft)
             ) {
                 headers.forEachIndexed { colIndex, header ->
-                    Text(
-                        text = inlineMarkdown(header, colors),
+                    RichInlineText(
+                        text = header,
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = colors.ink,
                         modifier = Modifier
@@ -557,8 +570,8 @@ private fun DoodleTable(
                 ) {
                     headers.indices.forEach { colIndex ->
                         val cell = row.getOrNull(colIndex).orEmpty()
-                        Text(
-                            text = inlineMarkdown(cell, colors),
+                        RichInlineText(
+                            text = cell,
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.ink,
                             modifier = Modifier
@@ -674,6 +687,21 @@ private fun splitTableCells(line: String): List<String> {
     if (trimmed.startsWith("|")) trimmed = trimmed.substring(1)
     if (trimmed.endsWith("|") && trimmed.isNotEmpty()) trimmed = trimmed.substring(0, trimmed.length - 1)
     return trimmed.split('|').map { it.trim() }
+}
+
+private fun tryParseChecklist(items: List<String>): List<ChecklistItem>? {
+    if (items.isEmpty()) return null
+    val parsed = items.mapNotNull { raw ->
+        val t = raw.trimStart()
+        when {
+            t.startsWith("[ ] ") -> ChecklistItem(t.substring(4).trim(), initialChecked = false)
+            t.startsWith("[x] ", ignoreCase = true) -> ChecklistItem(t.substring(4).trim(), initialChecked = true)
+            t == "[ ]" -> ChecklistItem("", initialChecked = false)
+            t.equals("[x]", ignoreCase = true) -> ChecklistItem("", initialChecked = true)
+            else -> null
+        }
+    }
+    return if (parsed.size == items.size) parsed else null
 }
 
 private fun tryParseBarChart(items: List<String>): List<BarEntry>? {
@@ -819,9 +847,11 @@ private fun parseBlocks(text: String): List<Block> {
                     items.add(stripUnorderedPrefix(lines[index]))
                     index += 1
                 }
-                val barEntries = tryParseBarChart(items)
-                val routeStops = if (barEntries == null) tryParseRouteStops(items) else null
+                val checklist = tryParseChecklist(items)
+                val barEntries = if (checklist == null) tryParseBarChart(items) else null
+                val routeStops = if (checklist == null && barEntries == null) tryParseRouteStops(items) else null
                 when {
+                    checklist != null -> blocks.add(Block.Checklist(checklist))
                     barEntries != null -> blocks.add(Block.BarChart(barEntries))
                     routeStops != null -> blocks.add(Block.RouteMap(routeStops))
                     else -> blocks.add(Block.ListBlock(items, ordered = false))
@@ -834,9 +864,11 @@ private fun parseBlocks(text: String): List<Block> {
                     items.add(stripOrderedPrefix(lines[index]))
                     index += 1
                 }
-                val barEntries = tryParseBarChart(items)
-                val routeStops = if (barEntries == null) tryParseRouteStops(items) else null
+                val checklist = tryParseChecklist(items)
+                val barEntries = if (checklist == null) tryParseBarChart(items) else null
+                val routeStops = if (checklist == null && barEntries == null) tryParseRouteStops(items) else null
                 when {
+                    checklist != null -> blocks.add(Block.Checklist(checklist))
                     barEntries != null -> blocks.add(Block.BarChart(barEntries))
                     routeStops != null -> blocks.add(Block.RouteMap(routeStops))
                     else -> blocks.add(Block.ListBlock(items, ordered = true))
@@ -867,11 +899,74 @@ private fun parseBlocks(text: String): List<Block> {
     return blocks
 }
 
-private fun inlineMarkdown(text: String, colors: com.chatapp.ui.theme.PawPalColors): AnnotatedString {
-    if (!text.contains('*') && !text.contains('`') && !text.contains('[')) {
-        return AnnotatedString(text)
+@Composable
+fun RichInlineText(
+    text: String,
+    style: TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val colors = LocalPawPalColors.current
+    val parsed = remember(text, colors) { inlineMarkdownWithSwatches(text, colors) }
+    Text(
+        text = parsed.text,
+        style = style,
+        color = color,
+        inlineContent = parsed.inlineContent,
+        modifier = modifier
+    )
+}
+
+private data class RichMarkdownResult(
+    val text: AnnotatedString,
+    val inlineContent: Map<String, InlineTextContent>
+)
+
+private fun isHexDigit(c: Char): Boolean =
+    c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F'
+
+private fun parseHexColorOrNull(raw: String): Color? {
+    if (raw.length != 7 || raw[0] != '#') return null
+    for (k in 1..6) if (!isHexDigit(raw[k])) return null
+    val rgb = raw.substring(1).toLongOrNull(16) ?: return null
+    return Color(0xFF000000L or rgb)
+}
+
+private fun inlineMarkdownWithSwatches(
+    text: String,
+    colors: com.chatapp.ui.theme.PawPalColors
+): RichMarkdownResult {
+    if (!text.contains('*') && !text.contains('`') && !text.contains('[') && !text.contains('#')) {
+        return RichMarkdownResult(AnnotatedString(text), emptyMap())
     }
-    return buildAnnotatedString {
+    val inlineMap = mutableMapOf<String, InlineTextContent>()
+
+    fun registerSwatch(hex: String, swatchColor: Color): String {
+        val key = "swatch_${hex.uppercase()}"
+        if (!inlineMap.containsKey(key)) {
+            val outline = colors.line
+            inlineMap[key] = InlineTextContent(
+                Placeholder(
+                    width = 16.sp,
+                    height = 16.sp,
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                )
+            ) {
+                Box(
+                    modifier = Modifier.padding(start = 2.dp, end = 1.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.size(12.dp)) {
+                        drawCircle(color = swatchColor)
+                        drawCircle(color = outline, style = Stroke(width = 2.2f))
+                    }
+                }
+            }
+        }
+        return key
+    }
+
+    val annotated = buildAnnotatedString {
         var i = 0
         while (i < text.length) {
             when {
@@ -890,6 +985,7 @@ private fun inlineMarkdown(text: String, colors: com.chatapp.ui.theme.PawPalColo
                 text[i] == '`' -> {
                     val end = text.indexOf('`', i + 1)
                     if (end > i + 1) {
+                        val code = text.substring(i + 1, end)
                         withStyle(
                             SpanStyle(
                                 fontFamily = FontFamily.Monospace,
@@ -897,9 +993,35 @@ private fun inlineMarkdown(text: String, colors: com.chatapp.ui.theme.PawPalColo
                                 color = colors.ink
                             )
                         ) {
-                            append(text.substring(i + 1, end))
+                            append(code)
+                        }
+                        val swatchColor = parseHexColorOrNull(code.trim())
+                        if (swatchColor != null) {
+                            appendInlineContent(registerSwatch(code.trim(), swatchColor), " ")
                         }
                         i = end + 1
+                    } else {
+                        append(text[i]); i += 1
+                    }
+                }
+
+                text[i] == '#' && i + 7 <= text.length &&
+                    (i == 0 || !text[i - 1].isLetterOrDigit()) &&
+                    (i + 7 == text.length || !isHexDigit(text[i + 7])) -> {
+                    val candidate = text.substring(i, i + 7)
+                    val swatchColor = parseHexColorOrNull(candidate)
+                    if (swatchColor != null) {
+                        withStyle(
+                            SpanStyle(
+                                fontFamily = FontFamily.Monospace,
+                                background = colors.butterSoft,
+                                color = colors.ink
+                            )
+                        ) {
+                            append(candidate)
+                        }
+                        appendInlineContent(registerSwatch(candidate, swatchColor), " ")
+                        i += 7
                     } else {
                         append(text[i]); i += 1
                     }
@@ -934,7 +1056,8 @@ private fun inlineMarkdown(text: String, colors: com.chatapp.ui.theme.PawPalColo
                     val nextStar = text.indexOf('*', i).let { if (it == -1) Int.MAX_VALUE else it }
                     val nextBacktick = text.indexOf('`', i).let { if (it == -1) Int.MAX_VALUE else it }
                     val nextBracket = text.indexOf('[', i).let { if (it == -1) Int.MAX_VALUE else it }
-                    val next = minOf(nextStar, minOf(nextBacktick, nextBracket))
+                    val nextHash = text.indexOf('#', i).let { if (it == -1) Int.MAX_VALUE else it }
+                    val next = minOf(minOf(nextStar, nextBacktick), minOf(nextBracket, nextHash))
                     if (next == Int.MAX_VALUE) {
                         append(text.substring(i))
                         break
@@ -949,6 +1072,7 @@ private fun inlineMarkdown(text: String, colors: com.chatapp.ui.theme.PawPalColo
             }
         }
     }
+    return RichMarkdownResult(annotated, inlineMap)
 }
 
 private fun formatTime(timestamp: Long): String =
